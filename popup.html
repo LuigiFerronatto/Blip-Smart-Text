@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blip SmartText</title>
+  <link rel="stylesheet" href="styles/popup.css">
+  <script defer type="module" src="scripts/popup.js"></script>
+</head>
+
+<body>
+  <!-- Home Screen -->
+  <div class="content" id="home-screen">
+    <h1>🔥 Blip SmartText</h1>
+    <p><strong>Seu assistente de escrita inteligente!</strong> Formate texto, insira emojis e reescreva conteúdo com IA.</p>
+
+    <div class="developer-info">
+      <p><strong>Desenvolvido por:</strong>Luigi Ferronatto</p>
+      <p><strong>Email:</strong>luigi.ferronatto@blip.ai</p>
+    </div>
+
+    <div class="button-container">
+      <button class="button" id="configure-btn">⚙️ Configurar</button>
+      <button class="button button-report" id="feedback-btn">💬 Feedback</button>
+    </div>
+  </div>
+
+  <!-- Configuration Screen (Hidden Initially) -->
+  <div class="content hidden" id="config-screen">
+    <button class="button-secondary" id="back-btn">⬅️ Voltar</button>
+    
+    <h3>Configurações de Reescrita</h3>
+
+    <label for="profileSelector">Selecione ou crie um perfil:</label>
+    <select id="profileSelector"></select>
+    <div class="button-container">
+      <button id="newProfile" class="button-secondary">➕ Novo Perfil</button>
+      <button id="deleteProfile" class="button-delete">🗑 Excluir Perfil</button>
+    </div>
+
+    <h4>Estilo de Escrita</h4>
+    <label><input type="radio" name="style" value="Professional"> Profissional</label>
+    <label><input type="radio" name="style" value="Casual"> Casual</label>
+    <label><input type="radio" name="style" value="Creative"> Criativo</label>
+
+    <h4>Ajustes da IA</h4>
+    <label><input type="checkbox" id="uxWriting"> Otimização para UX Writing</label>
+    <label><input type="checkbox" id="cognitiveBias"> Aplicar Viés Cognitivo</label>
+    <label><input type="checkbox" id="addEmojis"> Inserir Emojis Automaticamente</label>
+
+    <h4>Reescrita Automática</h4>
+    <label><input type="checkbox" id="autoRewrite"> Ativar Reescrita Automática</label>
+
+    <!-- Custom Prompt Section (Hidden Initially) -->
+    <button id="togglePrompt" class="button-secondary">📝 Criar Prompt Personalizado</button>
+    <textarea id="customPrompt" placeholder="Escreva seu prompt personalizado..." class="hidden"></textarea>
+
+    <button id="saveProfile">💾 Salvar Perfil</button>
+  </div>
+
+  <footer>
+    &copy; 2024 Blip SmartText. Todos os direitos reservados.
+  </footer>
+
+  <script defer type="module" src="scripts/content.js"></script>
+</body>
+
+</html>

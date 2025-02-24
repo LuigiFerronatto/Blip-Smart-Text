@@ -1,0 +1,173 @@
+:root {
+    /* Blip Blues */
+    --blip-light: #C5D9FB;
+    --blip-blue-brand: #111e27;
+    --blip-action: #1968F0;
+    --blip-dark: #0C4EC0;
+    --blip-night: #072F73;
+
+    /* Black / White */
+    --black: #000000;
+    --cod-gray: #141414;
+    --mine-shaft: #1F1F1F;
+    --mine-shaft-2: #292929;
+    --dove-gray: #525252;
+
+    /* Gray */
+    --dove-gray-2: #666666;
+    --silver-chalice: #A3A3A3;
+    --mercury: #E0E0E0;
+    --wild-sand: #F5F5F5;
+    --wild-sand-2: #F5F5F5;
+    --alabaster: #FFFFFF;
+
+    /* Cores secundárias */
+    --razzle-dazzle-rose: #FB4BC1;
+    --lavender-rose: #FD9BDC;
+    --flirt-1: #A0036C;
+    --pink-lace: #FEC3EA;
+
+    --milano-red: #AD0B0B;
+    --pomegranate: #E60F0F;
+    --geraldine: #F67979;
+    --cinderella: #FBC5C5;
+
+    --oregon: #8C3A03;
+    --chilean-fire: #F06305;
+    --macaroni-and-cheese: #FCAA73;
+    --romantic: #FEDBC3;
+
+    --buddha-gold: #A08103;
+    --candlelight: #FBCF23;
+    --marigold-yellow: #FCE173;
+    --vis-vis: #FDE99B;
+
+    --jewel: #10603B;
+    --mountain-meadow: #1BA766;
+    --shamrock: #35DE90;
+    --magic-mint: #84EBBC;
+
+    --jagger: #2B0849;
+    --windsor: #561093;
+    --lavender: #A85AED;
+    --perfume: #E2C8F9;
+
+    /* Cores de produto */
+    --select-bg: #E9F7F8;
+    --disabled-bg: #DAF2F4;
+    --hover-light: #D1E3FA;
+    --hover-medium: #2D91AF;
+
+    --disabled-delete: #FCCCCC;
+    --disabled-error: #DA7A7A;
+    --disabled-wrong: #BA5A5A;
+
+    --rooftop: #505F79;
+    --desk: #3A4A65;
+    --skate: #233049;
+    --city: #202C44;
+    --ico: #192438;
+    --suit: #212A3C;
+    --onix: #1A2437;
+    --eclipse: #0A0F1A;
+
+    --wave: #D2DFE6;
+    --silver: #B9CBD3;
+    --cloud: #8CA0B3;
+    --snow: #FFFFFF;
+    --breeze: #F8FBFB;
+    --box: #E7EDF4;
+    --whisper: #F3F6FA;
+
+      /* Blip Blues */
+  --blip-light: #C5D9FB;
+  --blip-blue-brand: #111e27;
+  --blip-action: #1968F0;
+  --blip-dark: #0C4EC0;
+  --blip-night: #072F73;
+
+  /* Black / White */
+  --black: #000000;
+  --cod-gray: #141414;
+  --mine-shaft: #1F1F1F;
+  --mine-shaft-2: #292929;
+  --dove-gray: #525252;
+  --alabaster: #FFFFFF;
+
+  /* Gray */
+  --dove-gray-2: #666666;
+  --silver-chalice: #A3A3A3;
+  --mercury: #E0E0E0;
+  --wild-sand: #F5F5F5;
+
+  /* Outros */
+  --disabled-delete: #fccccc;
+  --hover-light: #d1e3fa;
+  --hover-medium: #2d91af;
+
+  /* Fontes e Espaçamento */
+  --font-primary: "Carbona", sans-serif;
+  --font-secondary: "Lexend", sans-serif;
+  --fs-h1: 40px;
+  --fs-h2: 32px;
+  --fs-h3: 24px;
+  --fs-h4: 20px;
+  --fs-p1: 16px;
+  --fs-p2: 14px;
+  --fs-p3: 12px;
+  --fs-p4: 10px;
+  --lh-h1: 1.2;
+  --lh-h2: 1.25;
+  --lh-h3: 1.33;
+  --lh-h4: 1.4;
+  --lh-p: 1.6;
+  --fw-normal: 400;
+  --fw-bold: 600;
+
+  /* Blip Colors */
+  --blip-brand: #0096fa; /* $color-brand */
+  --blip-primary: #1e6bf1; /* $color-primary */
+  --blip-secondary: #292929; /* $color-secondary */
+  --blip-content-default: #454545; /* $color-content-default */
+  --blip-content-disable: #636363; /* $color-content-disable */
+  --blip-success: #84ebbc; /* $color-success */
+  --blip-warning: #fde99b; /* $color-warning */
+  --blip-error: #f99f9f; /* $color-error */
+  --blip-delete: #e60f0f; /* $color-delete */
+
+  /* Background Surfaces */
+  --surface-0: #ffffff; /* $color-surface-0 */
+  --surface-1: #f6f6f6; /* $color-surface-1 */
+  --surface-2: #e0e0e0; /* $color-surface-2 */
+  --surface-3: #cfcfcf; /* $color-surface-3 */
+
+  /* Fontes e Espaçamento */
+  --font-primary: "Carbona", sans-serif;
+  --font-secondary: "Lexend", sans-serif;
+  --fs-h1: 40px;
+  --fs-h2: 32px;
+  --fs-h3: 24px;
+  --fs-h4: 20px;
+  --fs-p1: 16px;
+  --fs-p2: 14px;
+  --fs-p3: 12px;
+  --fs-p4: 10px;
+  --lh-p: 1.6;
+  --fw-normal: 400;
+  --fw-bold: 600;
+
+    /* Elevações */
+    --elevation-1: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --elevation-2: 0 10px 16px rgba(0, 0, 0, 0.12);
+    --elevation-3: 0 16px 20px rgba(0, 0, 0, 0.16);
+}
+
+/* Estilos Globais */
+body {
+    font-family: "Lexend", sans-serif;
+    font-weight: 200;
+    margin: 0;
+    padding: 0;
+    background-color: var(--wild-sand);
+    color: var(--mine-shaft);
+}

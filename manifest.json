@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Blip SmartText",
+  "version": "1.0",
+  "description": "Floating toolbar for text formatting, emoji insertion, and AI rewriting.",
+  "icons": {
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "permissions": ["storage", "activeTab", "contextMenus", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scripts/content.js"],
+      "css": ["styles/content.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ],
+  "commands": {
+    "open_ai_rewrite": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+R"
+      },
+      "description": "Rewrite selected text with AI"
+    }
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "assets/icons/icon48.png"
+    }
+  }
+}

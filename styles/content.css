@@ -1,0 +1,25 @@
+
+  #blip-menu {
+    position: absolute;
+    display: flex;
+    gap: 5px;
+    background: rgb(86, 86, 86);
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+}
+
+#blip-menu button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+#blip-menu button:hover {
+    background: #f1f1f1;
+}
