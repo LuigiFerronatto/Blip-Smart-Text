@@ -6,64 +6,176 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blip SmartText</title>
   <link rel="stylesheet" href="styles/popup.css">
-  <script defer type="module" src="scripts/popup.js"></script>
+  <script type="module" src="scripts/popup.js"></script>
 </head>
 
 <body>
-  <!-- Home Screen -->
-  <div class="content" id="home-screen">
-    <h1>🔥 Blip SmartText</h1>
-    <p><strong>Seu assistente de escrita inteligente!</strong> Formate texto, insira emojis e reescreva conteúdo com IA.</p>
-
-    <div class="developer-info">
-      <p><strong>Desenvolvido por:</strong>Luigi Ferronatto</p>
-      <p><strong>Email:</strong>luigi.ferronatto@blip.ai</p>
+  <!-- Barra de Navegação -->
+  <header class="app-header">
+    <div class="logo">
+      <img src="assets/icons/icon48.png" alt="Blip SmartText Logo" width="32" height="32">
+      <h1>SmartText</h1>
     </div>
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="home">Home</button>
+      <button class="tab-btn" data-tab="config">Configurações</button>
+      <button class="tab-btn" data-tab="help">Ajuda</button>
+    </nav>
+  </header>
 
-    <div class="button-container">
-      <button class="button" id="configure-btn">⚙️ Configurar</button>
-      <button class="button button-report" id="feedback-btn">💬 Feedback</button>
-    </div>
-  </div>
+  <!-- Tela Principal -->
+  <main class="app-content">
+    <!-- Home Screen -->
+    <section class="content-panel active" id="home-screen">
+      <div class="welcome-banner">
+        <h2>Seu assistente de escrita inteligente!</h2>
+        <p>Formate texto, insira emojis e reescreva conteúdo com IA.</p>
+      </div>
 
-  <!-- Configuration Screen (Hidden Initially) -->
-  <div class="content hidden" id="config-screen">
-    <button class="button-secondary" id="back-btn">⬅️ Voltar</button>
-    
-    <h3>Configurações de Reescrita</h3>
+      <div class="feature-cards">
+        <div class="feature-card">
+          <div class="feature-icon">✏️</div>
+          <h3>Formatação Rápida</h3>
+          <p>Selecione qualquer texto para formatar com negrito, itálico e mais.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>Reescrita com IA</h3>
+          <p>Use IA para melhorar seu texto automaticamente.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">😊</div>
+          <h3>Inserção de Emojis</h3>
+          <p>Acesse emojis rapidamente para tornar seu texto mais expressivo.</p>
+        </div>
+      </div>
 
-    <label for="profileSelector">Selecione ou crie um perfil:</label>
-    <select id="profileSelector"></select>
-    <div class="button-container">
-      <button id="newProfile" class="button-secondary">➕ Novo Perfil</button>
-      <button id="deleteProfile" class="button-delete">🗑 Excluir Perfil</button>
-    </div>
+      <div class="quick-actions">
+        <button class="button" id="configure-btn">⚙️ Configurar</button>
+        <button class="button button-secondary" id="feedback-btn">💬 Feedback</button>
+      </div>
 
-    <h4>Estilo de Escrita</h4>
-    <label><input type="radio" name="style" value="Professional"> Profissional</label>
-    <label><input type="radio" name="style" value="Casual"> Casual</label>
-    <label><input type="radio" name="style" value="Creative"> Criativo</label>
+      <div class="developer-info">
+        <p><strong>Desenvolvido por:</strong> Luigi Ferronatto</p>
+        <p><strong>Email:</strong> luigi.ferronatto@blip.ai</p>
+      </div>
+    </section>
 
-    <h4>Ajustes da IA</h4>
-    <label><input type="checkbox" id="uxWriting"> Otimização para UX Writing</label>
-    <label><input type="checkbox" id="cognitiveBias"> Aplicar Viés Cognitivo</label>
-    <label><input type="checkbox" id="addEmojis"> Inserir Emojis Automaticamente</label>
+    <!-- Tela de Configuração -->
+    <section class="content-panel" id="config-screen">
+      <div class="config-container">
+        <h2>Configurações de Reescrita</h2>
 
-    <h4>Reescrita Automática</h4>
-    <label><input type="checkbox" id="autoRewrite"> Ativar Reescrita Automática</label>
+        <div class="form-group">
+          <label for="profileSelector">Gerenciamento de Perfis:</label>
+          <select id="profileSelector" class="form-control"></select>
+          <div class="button-row">
+            <button id="newProfile" class="button-secondary">➕ Novo</button>
+            <button id="deleteProfile" class="button-delete" disabled>🗑 Excluir</button>
+          </div>
+        </div>
 
-    <!-- Custom Prompt Section (Hidden Initially) -->
-    <button id="togglePrompt" class="button-secondary">📝 Criar Prompt Personalizado</button>
-    <textarea id="customPrompt" placeholder="Escreva seu prompt personalizado..." class="hidden"></textarea>
+        <div class="form-group">
+          <h3>Estilo de Escrita</h3>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="style" value="Professional" checked>
+              <span class="radio-text">Profissional</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="style" value="Casual">
+              <span class="radio-text">Casual</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="style" value="Creative">
+              <span class="radio-text">Criativo</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="style" value="Technical">
+              <span class="radio-text">Técnico</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="style" value="Persuasive">
+              <span class="radio-text">Persuasivo</span>
+            </label>
+          </div>
+        </div>
 
-    <button id="saveProfile">💾 Salvar Perfil</button>
-  </div>
+        <div class="form-group">
+          <h3>Ajustes da IA</h3>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="uxWriting">
+              <span class="checkbox-text">Otimização para UX Writing</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="cognitiveBias">
+              <span class="checkbox-text">Aplicar Viés Cognitivo</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="addEmojis">
+              <span class="checkbox-text">Inserir Emojis Automaticamente</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="autoRewrite">
+              <span class="checkbox-text">Ativar Reescrita Automática</span>
+            </label>
+          </div>
+        </div>
 
-  <footer>
-    &copy; 2024 Blip SmartText. Todos os direitos reservados.
+        <div class="form-group">
+          <button id="togglePrompt" class="button-secondary">📝 Criar Prompt Personalizado</button>
+          <textarea id="customPrompt" placeholder="Instruções específicas para a IA personalizar sua reescrita..." class="hidden"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button id="saveProfile" class="button">💾 Salvar Perfil</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tela de Ajuda -->
+    <section class="content-panel" id="help-screen">
+      <div class="help-container">
+        <h2>Como usar o SmartText</h2>
+
+        <div class="help-card">
+          <h3>Formatação de Texto</h3>
+          <p>1. Selecione qualquer texto editável em uma página web</p>
+          <p>2. Um menu flutuante aparecerá automaticamente</p>
+          <p>3. Clique nos botões de formatação para aplicar os estilos</p>
+          <img src="assets/help/formatting.png" alt="Demonstração de formatação" class="help-img">
+        </div>
+
+        <div class="help-card">
+          <h3>Reescrita com IA</h3>
+          <p>1. Selecione o texto que deseja melhorar</p>
+          <p>2. Clique no botão ✨ no menu flutuante</p>
+          <p>3. Aguarde enquanto a IA reescreve seu texto</p>
+          <div class="tip">💡 Dica: Use Ctrl+Shift+R como atalho para reescrever o texto selecionado</div>
+        </div>
+
+        <div class="help-card">
+          <h3>Inserção de Emojis</h3>
+          <p>1. Clique no menu de contexto (botão direito) em qualquer campo de texto</p>
+          <p>2. Selecione "Inserir Emoji 😀"</p>
+          <p>3. Escolha um emoji do painel que aparecer</p>
+        </div>
+
+        <div class="help-card">
+          <h3>Atalhos de Teclado</h3>
+          <ul class="shortcut-list">
+            <li><span class="shortcut">Ctrl+Shift+R</span> - Reescrever texto selecionado</li>
+            <li><span class="shortcut">Ctrl+Shift+F</span> - Abrir menu de formatação</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>&copy; 2024 SmartText by Blip. v1.1.0</p>
   </footer>
-
-  <script defer type="module" src="scripts/content.js"></script>
 </body>
 
 </html>

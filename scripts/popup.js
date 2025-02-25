@@ -1,3 +1,6 @@
+//scripts/popup.js
+
+
 import { saveProfile, getProfiles, deleteProfile } from "./storage.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -26,10 +29,16 @@ function toggleScreen(screenId) {
 
 // Load Profiles into the Select Dropdown
 function loadProfiles() {
+    
     const profileSelector = document.getElementById("profileSelector");
     profileSelector.innerHTML = "";
 
     let profiles = getProfiles();
+    if (!profiles || Object.keys(profiles).length === 0) {
+        console.warn("⚠️ Nenhum perfil salvo no localStorage.");
+        return;
+    }
+    console.log("🔍 Perfis carregados:", profiles);
     for (let name in profiles) {
         let option = document.createElement("option");
         option.value = name;
