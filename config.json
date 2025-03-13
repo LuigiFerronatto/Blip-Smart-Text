@@ -2,7 +2,7 @@
     "api": {
       "key": "22c921ec30c04a28aa32c86edd034156",
       "url": "https://dev-openai-take.openai.azure.com/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-      "model": "gpt-4"
+      "model": "gpt-4-0613"
     },
     "settings": {
       "defaultStyle": "Professional",

@@ -24,7 +24,7 @@
   "commands": {
     "open_ai_rewrite": {
       "suggested_key": {
-        "default": "Ctrl+Shift+R"
+        "default": "Ctrl+Shift+H"
       },
       "description": "Rewrite selected text with AI"
     }

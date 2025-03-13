@@ -1,168 +1,413 @@
-/* styles/popup.css */
-
-
-@import url("styleguide.css");
-
-/* 🎨 General Styling */
 body {
-  width: 500px;
-  height: 500px;
-  font-family: var(--font-secondary);
-  background-color: var(--surface-1);
-  color: var(--blip-content-default);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
+  color: var(--text-dark);
+  background-color: var(--background-light);
+  width: 600px;
+  height: 650px;
+   */
 }
 
-/* 📌 Main Content Styling */
-.content {
+.popup-container {
+  display: flex;
+  height: 100%;
   background-color: var(--surface-0);
-  border: 1px solid var(--surface-2);
   border-radius: 12px;
-  padding: 24px;
-  margin: 1rem;
-  box-shadow: var(--elevation-1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 80px;
+  background-color: var(--primary-color);
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg) 0;
+  transition: width 0.3s ease;
+}
+
+.sidebar .logo {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-bottom: var(--spacing-xl);
 }
 
-/* 🎭 Hide elements initially */
-.hidden {
+.sidebar .logo img {
+  width: 48px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.sidebar .logo h1 {
+  color: white;
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.nav-item .icon {
+  font-size: 1.5rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.nav-item span {
+  font-size: var(--font-size-small);
+}
+
+.nav-item:hover, .nav-item.active {
+  background-color: rgba(255,255,255,0.1);
+  color: white;
+}
+
+/* Área de Conteúdo */
+.content-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+}
+
+.screen {
   display: none;
 }
 
-/* 🔠 Typography */
-h1, h3, h4 {
-  font-family: var(--font-secondary);
-  font-weight: var(--fw-bold);
-  color: var(--blip-primary);
-  text-align: center;
-  margin-bottom: 12px;
+.screen.active {
+  display: block;
+  animation: fadeIn var(--transition-normal);
 }
 
-p {
-  font-size: var(--fs-p1);
-  color: var(--blip-content-disable);
-  text-align: center;
-  margin-bottom: 10px;
-  line-height: var(--lh-p);
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* 🚀 Buttons (Action-Oriented, UX-Optimized) */
-.button {
-  background-color: var(--blip-primary);
-  color: var(--surface-0);
-  border: none;
-  padding: 14px;
+/* Headers */
+header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+header h2 {
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-sm);
+}
+
+header p {
+  color: var(--text-muted);
+}
+
+/* Feature Grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.feature-card {
+  background-color: var(--surface-1);
   border-radius: 8px;
-  cursor: pointer;
-  font-size: var(--fs-p2);
-  transition: background-color 0.3s ease;
-  width: 100%;
-  font-weight: var(--fw-bold);
-  display: flex;
+  padding: var(--spacing-lg);
+  text-align: center;
+  transition: transform var(--transition-fast);
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.feature-card .feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.feature-card h3 {
+  margin-bottom: var(--spacing-sm);
+  color: var(--primary-color);
+}
+
+/* Botões */
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  gap: var(--spacing-sm);
+  font-weight: 500;
 }
 
-.button:hover {
-  background-color: var(--blip-brand);
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
 }
 
-.button-secondary {
-  background: var(--hover-light);
-  color: var(--mine-shaft);
-  font-weight: var(--fw-normal);
+.btn-primary:hover {
+  background-color: var(--secondary-color);
 }
 
-.button-secondary:hover {
-  background: var(--hover-medium);
+.btn-secondary {
+  background-color: var(--surface-1);
+  color: var(--text-dark);
 }
 
-.button-delete {
-  background: var(--blip-error);
+.btn-secondary:hover {
+  background-color: var(--surface-2);
 }
 
-.button-delete:hover {
-  background: var(--disabled-delete);
+.btn-delete {
+  background-color: #ff4d4d;
+  color: white;
 }
 
-/* 🧠 Cognitive Bias-Enhanced Buttons */
-.button[disabled] {
-  background: var(--disabled-bg);
-  color: var(--silver-chalice);
-  cursor: not-allowed;
+.btn-delete:hover {
+  background-color: #ff1a1a;
 }
 
-/* ✅ Button Container */
-.button-container {
+/* Seções específicas */
+.quick-actions {
   display: flex;
+  gap: var(--spacing-md);
   justify-content: center;
-  gap: 10px;
-  margin-top: 15px;
+}
+
+.input-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.input-group label {display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.form-control {
   width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--surface-2);
+  border-radius: 6px;
+  font-size: var(--font-size-base);
+  transition: border-color var(--transition-fast);
 }
 
-/* 🎯 Form Elements */
-label {
-  font-size: var(--fs-p1);
-  font-weight: var(--fw-bold);
-  display: block;
-  margin-bottom: 6px;
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(25, 104, 240, 0.1);
 }
 
-/* 🏗 Inputs */
-input[type="radio"], input[type="checkbox"] {
-  margin-right: 8px;
+/* Checkbox Group */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
 }
 
-input[type="radio"]:checked + label,
-input[type="checkbox"]:checked + label {
-  font-weight: var(--fw-bold);
-  color: var(--blip-primary);
-}
-
-/* 📌 Dropdown (Profile Selection) */
-#profileSelector {
-  width: 100%;
-  padding: 12px;
-  font-size: var(--fs-p2);
-  border-radius: 8px;
-  border: 1px solid var(--blip-content-disable);
-  margin-bottom: 12px;
-  background: var(--surface-0);
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
   cursor: pointer;
 }
 
-#profileSelector:hover {
-  border-color: var(--blip-primary);
-}
-
-/* 📝 Custom Prompt Textarea */
-textarea {
-  width: 100%;
-  height: 100px;
-  border: 1px solid var(--blip-content-disable);
-  border-radius: 8px;
-  padding: 10px;
-  font-size: var(--fs-p2);
-  display: none;
-  transition: all 0.3s ease;
-}
-
-textarea:focus {
-  border-color: var(--blip-primary);
+.checkbox-group input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--surface-2);
+  border-radius: 4px;
   outline: none;
+  transition: all var(--transition-fast);
+  position: relative;
 }
 
-/* ✨ Footer */
-footer {
+.checkbox-group input[type="checkbox"]:checked {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.checkbox-group input[type="checkbox"]:checked::after {
+  content: '✓';
+  color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+}
+
+/* Tela de Escrita com IA */
+.ai-writing-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.ai-writing-container textarea {
+  resize: vertical;
+  min-height: 100px;
+  max-height: 200px;
+}
+
+.ai-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Tela de Perfis */
+.profiles-container {
+  display: flex;
+  gap: var(--spacing-xl);
+}
+
+.profile-selector {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.profile-actions {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.profile-details {
+  flex: 2;
+  background-color: var(--surface-1);
+  padding: var(--spacing-lg);
+  border-radius: 8px;
+}
+
+/* Tela de Ajuda */
+.help-topics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.help-card {
+  background-color: var(--surface-1);
+  border-radius: 8px;
+  padding: var(--spacing-lg);
   text-align: center;
-  font-size: var(--fs-p3);
-  color: var(--blip-content-disable);
-  margin-top: 15px;
+  transition: transform var(--transition-fast);
+}
+
+.help-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.help-card h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--primary-color);
+}
+
+.feedback-section {
+  text-align: center;
+  background-color: var(--surface-1);
+  padding: var(--spacing-xl);
+  border-radius: 8px;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  margin-top: auto;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  padding: var(--spacing-md);
+  font-size: var(--font-size-small);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-1);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--secondary-color);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  body {
+      width: 100%;
+      height: 100vh;
+  }
+
+  .popup-container {
+      flex-direction: column;
+  }
+
+  .sidebar {
+      width: 100%;
+      flex-direction: row;
+      justify-content: space-around;
+      height: 60px;
+      padding: var(--spacing-sm) 0;
+  }
+
+  .sidebar .logo {
+      display: none;
+  }
+
+  .nav-menu {
+      flex-direction: row;
+      align-items: center;
+      gap: var(--spacing-xl);
+  }
+
+  .nav-item {
+      flex-direction: row;
+      gap: var(--spacing-sm);
+  }
+
+  .nav-item .icon {
+      margin-bottom: 0;
+      margin-right: var(--spacing-xs);
+  }
+
+  .content-area {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: var(--spacing-lg);
+  }
+
+  .feature-grid,
+  .help-topics {
+      grid-template-columns: 1fr;
+  }
 }

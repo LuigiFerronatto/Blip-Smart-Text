@@ -1,10 +1,10 @@
 /**
  * scripts/ai.js
- * Funções para reescrita de texto usando IA
+ * Funções para reescrita de texto usando IA com melhorias de tratamento de erro
  */
 
-// Importando constantes de configuração (melhor prática de segurança)
 import { API_CONFIG } from './config.js';
+import { getSelectedProfile } from './storage.js';
 
 /**
  * Reescreve um texto usando a API OpenAI com base no perfil selecionado
@@ -14,47 +14,36 @@ import { API_CONFIG } from './config.js';
 export async function rewriteText(text) {
     try {
         // Obter o perfil salvo, com fallback para perfil padrão
-        const profile = await getSelectedProfile();
+        const profile = await getSelectedProfile() || {
+            style: 'Professional',
+            uxWriting: false,
+            cognitiveBias: false,
+            addEmojis: false
+        };
         
         // Construir o prompt baseado no perfil
         const prompt = buildPrompt(text, profile);
-        
-        // Mostrar indicador de carregamento
-        toggleLoadingIndicator(true);
         
         // Fazer requisição para a API
         const response = await makeAPIRequest(prompt);
         
         return response;
     } catch (error) {
-        console.error("Error rewriting text:", error);
-        return "Ocorreu um erro ao reescrever o texto. Por favor, tente novamente.";
-    } finally {
-        // Esconder indicador de carregamento
-        toggleLoadingIndicator(false);
-    }
-}
+        console.error("Erro detalhado na reescrita de texto:", {
+            message: error.message,
+            stack: error.stack,
+            text: text
+        });
 
-/**
- * Obtém o perfil selecionado do armazenamento local
- * @returns {Object} - Perfil selecionado ou perfil padrão
- */
-async function getSelectedProfile() {
-    try {
-        const profileData = localStorage.getItem("profile_Selected");
-        if (!profileData) {
-            console.warn("Nenhum perfil encontrado, usando perfil padrão");
-            return { 
-                style: "Professional", 
-                uxWriting: false, 
-                cognitiveBias: false, 
-                addEmojis: false 
-            };
+        // Mensagens de erro mais detalhadas
+        if (error.message.includes('fetch')) {
+            return "Erro de conexão. Verifique sua internet.";
         }
-        return JSON.parse(profileData);
-    } catch (error) {
-        console.error("Erro ao obter perfil:", error);
-        return { style: "Professional" };
+        if (error.message.includes('API')) {
+            return "Problema com o serviço de IA. Tente novamente mais tarde.";
+        }
+        
+        return "Ocorreu um erro ao reescrever o texto. Por favor, tente novamente.";
     }
 }
 
@@ -65,71 +54,76 @@ async function getSelectedProfile() {
  * @returns {string} - Prompt formatado
  */
 function buildPrompt(text, profile) {
-    let prompt = `Rewrite this text:\n\n"${text}"\n\n`;
+    const styleMappings = {
+        'Professional': 'Use a formal, objective tone with precise language.',
+        'Casual': 'Write in a friendly, conversational style.',
+        'Creative': 'Use imaginative and engaging language.',
+        'Technical': 'Employ clear, precise technical language.',
+        'Persuasive': 'Craft a compelling, motivational text.'
+    };
 
-    // Adicionar instruções baseadas no perfil
-    prompt += `Style: ${profile.style || 'Professional'}\n`;
-    
-    if (profile.uxWriting) prompt += `- Optimize for UX Writing: clear, concise, helpful\n`;
-    if (profile.cognitiveBias) prompt += `- Apply cognitive biases: social proof, scarcity\n`;
-    if (profile.addEmojis) prompt += `- Add relevant emojis where appropriate\n`;
-    
-    // Se houver um prompt personalizado, usá-lo
-    if (profile.customPrompt) {
-        prompt += `\nAdditional instructions: ${profile.customPrompt}\n`;
-    }
-    
+    let prompt = `Rewrite the following text considering these guidelines:
+
+Original Text:
+"${text}"
+
+Style Guidelines:
+- Writing Style: ${styleMappings[profile.style] || styleMappings['Professional']}
+${profile.uxWriting ? '- Optimize for clarity and user experience' : ''}
+${profile.cognitiveBias ? '- Apply subtle persuasive techniques' : ''}
+${profile.addEmojis ? '- Consider adding relevant emojis' : ''}
+
+Rewritten Text:`;
+
     return prompt;
 }
 
 /**
- * Alterna a visibilidade do indicador de carregamento
- * @param {boolean} isVisible - Indicador deve estar visível
- */
-function toggleLoadingIndicator(isVisible) {
-    const loadingIndicator = document.getElementById("loadingIndicator");
-    if (loadingIndicator) {
-        loadingIndicator.style.display = isVisible ? "block" : "none";
-    }
-}
-
-/**
- * Faz a requisição para a API de IA
+ * Faz a requisição para a API de IA com melhor tratamento de erros
  * @param {string} prompt - Prompt para enviar
  * @returns {Promise<string>} - Texto respondido pela API
  */
 async function makeAPIRequest(prompt) {
-    // Usar configurações da importação para maior segurança
     const { apiKey, url } = API_CONFIG;
     
-    // Verificar se as configurações estão presentes
     if (!apiKey || !url) {
-        throw new Error("API configuration missing");
+        throw new Error("Configuração de API incompleta");
     }
     
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            messages: [
-                { role: "system", content: "You are a helpful assistant that rewrites text." },
-                { role: "user", content: prompt }
-            ],
-            max_tokens: 500,
-            temperature: 0.7
-        })
-    });
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: 'gpt-4-0613',
+                messages: [
+                    { role: "system", content: "You are a helpful assistant that rewrites text while maintaining the original meaning." },
+                    { role: "user", content: prompt }
+                ],
+                max_tokens: 500,
+                temperature: 0.7
+            })
+        });
 
-    if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API request failed with status ${response.status}: ${errorData}`);
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Erro na API: ${response.status} - ${errorBody}`);
+        }
+
+        const data = await response.json();
+        
+        // Log adicional para depuração
+        console.log("Resposta da API:", {
+            status: response.status,
+            choices: data.choices
+        });
+
+        return data.choices[0].message.content.trim();
+    } catch (error) {
+        console.error("Erro na chamada da API:", error);
+        throw error;  // Repassa o erro para tratamento superior
     }
-
-    const data = await response.json();
-    
-    // Corrigido para o formato de resposta de chat completions
-    return data.choices[0].message.content.trim();
 }

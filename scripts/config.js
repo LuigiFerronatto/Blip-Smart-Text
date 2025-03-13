@@ -5,9 +5,10 @@
 
 // Configuração da API - separada para fácil manutenção
 export const API_CONFIG = {
-    apiKey: "22c921ec30c04a28aa32c86edd034156", // Idealmente carregado de variáveis de ambiente
-    url: "https://dev-openai-take.openai.azure.com/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview"
+    apiKey: "9c834290886249ee86da40290caf6379", // Idealmente carregado de variáveis de ambiente
+    url: "https://aoi-east-us.openai.azure.com/openai/deployments/mega-mind-gpt4o-mini/chat/completions?api-version=2024-02-15-preview"
 };
+
 
 // Constantes de armazenamento
 export const STORAGE_KEYS = {
