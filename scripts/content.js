@@ -1,6 +1,6 @@
 /**
  * scripts/content.js
- * Script de conteúdo injetado nas páginas
+ * Script de conteúdo melhorado com novo menu flutuante e botão fixo
  */
 
 // Verificação para evitar reinjeção do script
@@ -11,7 +11,6 @@ if (window.hasRunBlipSmartText) {
 window.hasRunBlipSmartText = true;
 
 // Importar funções da API 
-// Usamos uma técnica para carregar módulos dinamicamente quando necessário
 let aiModule = null;
 function ensureAIModuleLoaded() {
     if (aiModule) return Promise.resolve(aiModule);
@@ -32,6 +31,7 @@ function ensureAIModuleLoaded() {
 
 // Variáveis globais
 let floatingMenu = null;
+let fixedButton = null;
 let activeInput = null;
 let settings = {
     autoRewrite: false,
@@ -54,6 +54,9 @@ function initialize() {
     
     // Escutar mensagens do background script
     setupMessageListener();
+    
+    // Adicionar botão fixo
+    createFixedButton();
 }
 
 function setupEventListeners() {
@@ -68,6 +71,9 @@ function setupEventListeners() {
     
     // Detecta mudanças de seleção de texto
     document.addEventListener("selectionchange", handleSelectionChange);
+    
+    // Detecta teclas especiais
+    document.addEventListener("keydown", handleKeyDown);
 }
 
 function setupMutationObserver() {
@@ -138,7 +144,7 @@ function handleFocusIn(event) {
 function handleTextSelection() {
     // Pequeno delay para evitar conflitos com outros eventos
     setTimeout(() => {
-        if (!activeInput || !isEditable(activeInput)) return;
+        if (!activeInput) return;
     
         const selectedText = getSelectedText();
         if (selectedText.length > 0) {
@@ -160,13 +166,9 @@ function handleOutsideClick(event) {
 
     // Verifica se o clique foi dentro do menu ou no campo editável
     if (floatingMenu.contains(event.target) || isEditable(event.target)) {
-        console.log("✅ Clique dentro do menu ou campo editável. Não fechar.");
         return;
     }
-
-    console.log("🛑 Clique fora do menu. Fechando...");
     
-    // Pequeno delay para permitir que outras ações sejam processadas
     setTimeout(() => {
         removeFloatingMenu();
     }, 100);
@@ -182,6 +184,27 @@ function handleSelectionChange() {
     // Atualiza posição do menu se ele existir e a seleção tiver tamanho
     if (floatingMenu && rect.width > 0 && rect.height > 0) {
         updateTooltipPosition(rect);
+    }
+}
+
+function handleKeyDown(event) {
+    // Atalhos de teclado
+    if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        // Ctrl+B - Negrito
+        event.preventDefault();
+        formatText("*");
+    } else if ((event.ctrlKey || event.metaKey) && event.key === 'i') {
+        // Ctrl+I - Itálico
+        event.preventDefault();
+        formatText("_");
+    } else if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+        // Ctrl+E - Tachado
+        event.preventDefault();
+        formatText("~");
+    } else if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        // Ctrl+K - Código
+        event.preventDefault();
+        formatText("`");
     }
 }
 
@@ -228,19 +251,216 @@ function getSelectedText() {
 }
 
 /* ==========================
+   BOTÃO FIXO
+========================== */
+
+function createFixedButton() {
+    // Remove o botão existente, se houver
+    if (fixedButton) {
+        fixedButton.remove();
+    }
+    
+    // Criar o botão flutuante fixo
+    fixedButton = document.createElement("div");
+    fixedButton.id = "blip-fixed-button";
+    fixedButton.className = "blip-fixed-button";
+    fixedButton.innerHTML = `
+        <div class="fixed-button-icon">✨</div>
+        <div class="fixed-button-tooltip">Reescrever com IA</div>
+    `;
+    
+    // Adicionar à página
+    document.body.appendChild(fixedButton);
+    
+    // Adicionar evento de clique
+    fixedButton.addEventListener("click", showAIPanelSidebar);
+}
+
+function showAIPanelSidebar() {
+    // Remove o painel existente, se houver
+    const existingPanel = document.getElementById("blip-ai-panel");
+    if (existingPanel) {
+        existingPanel.remove();
+        return;
+    }
+    
+    // Carregar perfis disponíveis
+    chrome.storage.local.get(['profiles'], (result) => {
+        const profiles = result.profiles || {};
+        
+        // Criar o painel lateral
+        const panel = document.createElement("div");
+        panel.id = "blip-ai-panel";
+        panel.className = "blip-ai-panel";
+        
+        panel.innerHTML = `
+            <div class="panel-header">
+                <h2>Blip SmartText</h2>
+                <button class="close-button">×</button>
+            </div>
+            
+            <div class="panel-content">
+                <h3>Reescrever Texto</h3>
+                <p class="panel-description">Selecione um texto e escolha um perfil para reescrevê-lo com IA.</p>
+                
+                <div class="input-group">
+                    <label for="ai-input">Texto Original</label>
+                    <textarea id="ai-input" placeholder="Cole ou digite um texto aqui..."></textarea>
+                </div>
+                
+                <div class="input-group">
+                    <label for="profile-select">Perfil de Escrita</label>
+                    <select id="profile-select">
+                        <option value="Professional">Profissional</option>
+                        <option value="Casual">Casual</option>
+                        <option value="Creative">Criativo</option>
+                        <option value="Technical">Técnico</option>
+                        <option value="Persuasive">Persuasivo</option>
+                    </select>
+                </div>
+                
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="ux-optimization"> 
+                        Otimizar para experiência do usuário
+                    </label>
+                    <label>
+                        <input type="checkbox" id="cognitive-bias"> 
+                        Aplicar técnicas persuasivas sutis
+                    </label>
+                    <label>
+                        <input type="checkbox" id="add-emojis"> 
+                        Adicionar emojis relevantes
+                    </label>
+                </div>
+                
+                <button id="rewrite-ai-btn" class="rewrite-button">🔄 Reescrever</button>
+                
+                <div class="input-group">
+                    <label for="ai-output">Texto Reescrito</label>
+                    <textarea id="ai-output" placeholder="O texto reescrito aparecerá aqui..." readonly></textarea>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="copy-output-btn" class="copy-button">📋 Copiar</button>
+                    <button id="insert-output-btn" class="insert-button">📝 Inserir no Campo</button>
+                </div>
+            </div>
+        `;
+        
+        // Adicionar à página
+        document.body.appendChild(panel);
+        
+        // Adicionar eventos
+        panel.querySelector(".close-button").addEventListener("click", () => panel.remove());
+        
+        const rewriteButton = panel.querySelector("#rewrite-ai-btn");
+        const copyButton = panel.querySelector("#copy-output-btn");
+        const insertButton = panel.querySelector("#insert-output-btn");
+        const inputTextarea = panel.querySelector("#ai-input");
+        const outputTextarea = panel.querySelector("#ai-output");
+        
+        // Preencher o textarea com o texto selecionado, se houver
+        const selectedText = getSelectedText();
+        if (selectedText) {
+            inputTextarea.value = selectedText;
+        }
+        
+        // Evento de reescrita
+        rewriteButton.addEventListener("click", async () => {
+            const text = inputTextarea.value.trim();
+            if (!text) {
+                showNotification("Por favor, insira um texto para reescrever", "error");
+                return;
+            }
+            
+            try {
+                rewriteButton.disabled = true;
+                rewriteButton.textContent = "Reescrevendo...";
+                
+                // Obter configurações selecionadas
+                const profile = {
+                    style: panel.querySelector("#profile-select").value,
+                    uxWriting: panel.querySelector("#ux-optimization").checked,
+                    cognitiveBias: panel.querySelector("#cognitive-bias").checked,
+                    addEmojis: panel.querySelector("#add-emojis").checked
+                };
+                
+                // Carregar o módulo AI se ainda não estiver carregado
+                await ensureAIModuleLoaded();
+                
+                if (!aiModule || !aiModule.rewriteText) {
+                    throw new Error("Módulo AI não disponível");
+                }
+                
+                // Chamar a função de reescrita
+                const rewrittenText = await aiModule.rewriteText(text);
+                
+                // Mostrar o texto reescrito
+                outputTextarea.value = rewrittenText;
+                
+                showNotification("Texto reescrito com sucesso!", "success");
+            } catch (error) {
+                console.error("❌ Erro ao reescrever texto com IA:", error);
+                showNotification("Não foi possível reescrever o texto. Tente novamente mais tarde.", "error");
+            } finally {
+                rewriteButton.disabled = false;
+                rewriteButton.textContent = "🔄 Reescrever";
+            }
+        });
+        
+        // Evento de cópia
+        copyButton.addEventListener("click", () => {
+            const text = outputTextarea.value.trim();
+            if (!text) {
+                showNotification("Nenhum texto para copiar", "error");
+                return;
+            }
+            
+            navigator.clipboard.writeText(text)
+                .then(() => showNotification("Texto copiado para a área de transferência!", "success"))
+                .catch(() => showNotification("Erro ao copiar texto", "error"));
+        });
+        
+        // Evento de inserção
+        insertButton.addEventListener("click", () => {
+            const text = outputTextarea.value.trim();
+            if (!text) {
+                showNotification("Nenhum texto para inserir", "error");
+                return;
+            }
+            
+            if (!activeInput || !isEditable(activeInput)) {
+                showNotification("Selecione um campo de texto antes", "error");
+                return;
+            }
+            
+            if (activeInput.tagName === "INPUT" || activeInput.tagName === "TEXTAREA") {
+                activeInput.value = text;
+                activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                // Para elementos com contentEditable
+                activeInput.textContent = text;
+                activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            
+            showNotification("Texto inserido com sucesso!", "success");
+            panel.remove();
+        });
+    });
+}
+
+/* ==========================
    FUNÇÕES DO MENU FLUTUANTE
 ========================== */
 
 function showFloatingMenu() {
     removeFloatingMenu(); // Evita menus duplicados
 
-    if (!activeInput || !isEditable(activeInput)) return;
+    if (!getSelectedText()) return;
 
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-
-    const selectedText = getSelectedText();
-    if (!selectedText) return;
 
     let range = selection.getRangeAt(0);
     let rect = range.getBoundingClientRect();
@@ -249,7 +469,7 @@ function showFloatingMenu() {
     floatingMenu = document.createElement("div");
     floatingMenu.id = "blip-menu";
     floatingMenu.className = "blip-floating-menu";
-    floatingMenu.innerHTML = getMenuHTML();
+    floatingMenu.innerHTML = getNewMenuHTML();
     document.body.appendChild(floatingMenu);
 
     // Atualiza a posição e a visibilidade do menu
@@ -269,18 +489,16 @@ function updateTooltipPosition(rect) {
     let top = rect.bottom + window.scrollY + 10;
     let left = rect.left + window.scrollX + (rect.width / 2) - (floatingMenu.offsetWidth / 2);
     
-    // Evita que o menu fique fora da tela à direita
+    // Evita que o menu fique fora da tela
     if (left + floatingMenu.offsetWidth > viewportWidth) {
         left = viewportWidth - floatingMenu.offsetWidth - 10;
     }
     
-    // Evita que o menu fique fora da tela à esquerda
     if (left < 10) {
         left = 10;
     }
     
     // Verifica se o menu ficaria abaixo da área visível
-    // Se sim, coloca-o acima da seleção
     if (top + floatingMenu.offsetHeight > viewportHeight + window.scrollY) {
         top = rect.top + window.scrollY - floatingMenu.offsetHeight - 10;
     }
@@ -303,31 +521,98 @@ function removeFloatingMenu() {
             if (floatingMenu && floatingMenu.parentNode) {
                 floatingMenu.remove();
                 floatingMenu = null;
-                console.log("🗑️ Menu removido.");
             }
         }, 200);
     }
 }
 
 /* ==========================
-   FUNÇÕES AUXILIARES DO MENU
+   NOVAS FUNÇÕES DO MENU
 ========================== */
 
-function getMenuHTML() {
+function getNewMenuHTML() {
     return `
-        <button class="menu-btn" data-action="bold" title="Negrito"><b>B</b></button>
-        <button class="menu-btn" data-action="italic" title="Itálico"><i>I</i></button>
-        <button class="menu-btn" data-action="strike" title="Tachado"><s>S</s></button>
-        <button class="menu-btn" data-action="code" title="Código">⟩⟨</button>
-        <button class="menu-btn" data-action="list-ordered" title="Lista Numerada">1.</button>
-        <button class="menu-btn" data-action="list-unordered" title="Lista com Marcadores">•</button>
-        <button class="menu-btn special" data-action="ai-rewrite" title="Reescrever com IA">✨</button>
+        <div class="menu-row primary-format">
+            <button class="menu-btn" data-action="bold" title="Negrito (Ctrl+B)">
+                <b>B</b>
+            </button>
+            <button class="menu-btn" data-action="italic" title="Itálico (Ctrl+I)">
+                <i>I</i>
+            </button>
+            <button class="menu-btn" data-action="strike" title="Tachado (Ctrl+E)">
+                <s>S</s>
+            </button>
+            <button class="menu-btn" data-action="code" title="Código (Ctrl+K)">
+                <code>{ }</code>
+            </button>
+            <div class="menu-separator"></div>
+            <button class="menu-btn" data-action="list-ordered" title="Lista Numerada">
+                <span class="icon">1.</span>
+            </button>
+            <button class="menu-btn" data-action="list-unordered" title="Lista com Marcadores">
+                <span class="icon">•</span>
+            </button>
+            <button class="menu-btn" data-action="quote" title="Citação">
+                <span class="icon">&gt;</span>
+            </button>
+        </div>
+        <div class="menu-row secondary-actions">
+            <button class="menu-btn ai-btn" data-action="ai-rewrite" title="Reescrever com IA">
+                <span class="icon">✨</span> <span class="btn-text">Reescrever com IA</span>
+            </button>
+            <div class="dropdown-group">
+                <button class="menu-btn dropdown-btn" data-action="show-more" title="Mais opções">
+                    <span class="icon">⋮</span>
+                </button>
+                <div class="dropdown-content">
+                    <button class="dropdown-item" data-action="emoji" title="Inserir Emoji">
+                        😀 Emojis
+                    </button>
+                    <button class="dropdown-item" data-action="clear-format" title="Limpar Formatação">
+                        Aa Limpar Formatação
+                    </button>
+                    <button class="dropdown-item" data-action="settings" title="Configurações">
+                        ⚙️ Configurações
+                    </button>
+                </div>
+            </div>
+        </div>
     `;
 }
 
 function attachMenuEventListeners() {
-    floatingMenu.querySelectorAll(".menu-btn").forEach(button => {
-        button.addEventListener("click", handleMenuAction);
+    // Botões regulares
+    floatingMenu.querySelectorAll(".menu-btn:not(.dropdown-btn)").forEach(button => {
+        if (button.dataset.action !== "show-more") {
+            button.addEventListener("click", handleMenuAction);
+        }
+    });
+    
+    // Botão de dropdown
+    const dropdownBtn = floatingMenu.querySelector(".dropdown-btn");
+    if (dropdownBtn) {
+        dropdownBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const dropdownContent = floatingMenu.querySelector(".dropdown-content");
+            dropdownContent.classList.toggle("show");
+        });
+    }
+    
+    // Itens do dropdown
+    floatingMenu.querySelectorAll(".dropdown-item").forEach(item => {
+        item.addEventListener("click", handleMenuAction);
+    });
+    
+    // Fechar dropdown ao clicar fora
+    document.addEventListener("click", (e) => {
+        if (!floatingMenu) return;
+        
+        const dropdownContent = floatingMenu.querySelector(".dropdown-content");
+        if (dropdownContent && dropdownContent.classList.contains("show")) {
+            if (!e.target.matches(".dropdown-btn") && !e.target.closest(".dropdown-content")) {
+                dropdownContent.classList.remove("show");
+            }
+        }
     });
 }
 
@@ -352,9 +637,13 @@ function handleMenuAction(event) {
         "italic": () => formatText("_"),
         "strike": () => formatText("~"),
         "code": () => formatText("`"),
-        "list-ordered": () => formatText("\n1. "),
-        "list-unordered": () => formatText("\n- "),
-        "ai-rewrite": () => rewriteSelectedText()
+        "list-ordered": () => formatList("1. "),
+        "list-unordered": () => formatList("- "),
+        "quote": () => formatList("> "),
+        "ai-rewrite": () => rewriteSelectedText(),
+        "emoji": () => showEmojiMenu(),
+        "clear-format": () => clearFormatting(),
+        "settings": () => openSettings()
     };
 
     if (actions[action]) {
@@ -376,7 +665,6 @@ function formatText(style) {
 
     // Diferenciação entre campos de entrada normais e de conteúdo editável
     if (activeInput.tagName === "INPUT" || activeInput.tagName === "TEXTAREA") {
-        // Formatação para elementos de formulário padrão
         const start = activeInput.selectionStart;
         const end = activeInput.selectionEnd;
         const text = activeInput.value;
@@ -415,7 +703,102 @@ function formatText(style) {
         }
     }
 
-    console.log("🎨 Texto formatado com sucesso!");
+    removeFloatingMenu();
+}
+
+function formatList(prefix) {
+    if (!activeInput || !isEditable(activeInput)) return;
+
+    const selectedText = getSelectedText();
+    if (!selectedText) return;
+
+    // Formata como lista ou citação
+    const lines = selectedText.split('\n');
+    const formattedText = lines.map(line => `${prefix}${line}`).join('\n');
+
+    if (activeInput.tagName === "INPUT" || activeInput.tagName === "TEXTAREA") {
+        const start = activeInput.selectionStart;
+        const end = activeInput.selectionEnd;
+        const text = activeInput.value;
+        
+        // Aplica a formatação
+        activeInput.value = text.slice(0, start) + formattedText + text.slice(end);
+        
+        // Atualiza a posição do cursor
+        activeInput.selectionStart = activeInput.selectionEnd = start + formattedText.length;
+        
+        // Dispara um evento input
+        activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+        // Para elementos com contentEditable
+        try {
+            document.execCommand("insertText", false, formattedText);
+        } catch (e) {
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            
+            const newTextNode = document.createTextNode(formattedText);
+            
+            range.deleteContents();
+            range.insertNode(newTextNode);
+            
+            selection.removeAllRanges();
+            const newRange = document.createRange();
+            newRange.selectNodeContents(newTextNode);
+            newRange.collapse(false);
+            selection.addRange(newRange);
+        }
+    }
+
+    removeFloatingMenu();
+}
+
+function clearFormatting() {
+    if (!activeInput || !isEditable(activeInput)) return;
+
+    const selectedText = getSelectedText();
+    if (!selectedText) return;
+
+    // Remove formatação (asteriscos, underscores, etc.)
+    const cleanText = selectedText
+        .replace(/\*\*?(.*?)\*\*?/g, '$1')  // Remove asteriscos (negrito)
+        .replace(/__(.*?)__/g, '$1')        // Remove underscores duplos
+        .replace(/_(.*?)_/g, '$1')          // Remove underscores simples (itálico)
+        .replace(/~~(.*?)~~/g, '$1')        // Remove tildes (tachado)
+        .replace(/`(.*?)`/g, '$1');         // Remove backticks (código)
+
+    if (activeInput.tagName === "INPUT" || activeInput.tagName === "TEXTAREA") {
+        const start = activeInput.selectionStart;
+        const end = activeInput.selectionEnd;
+        const text = activeInput.value;
+        
+        activeInput.value = text.slice(0, start) + cleanText + text.slice(end);
+        activeInput.selectionStart = activeInput.selectionEnd = start + cleanText.length;
+        activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+        try {
+            document.execCommand("insertText", false, cleanText);
+        } catch (e) {
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            const cleanNode = document.createTextNode(cleanText);
+            
+            range.deleteContents();
+            range.insertNode(cleanNode);
+            
+            selection.removeAllRanges();
+            const newRange = document.createRange();
+            newRange.selectNodeContents(cleanNode);
+            newRange.collapse(false);
+            selection.addRange(newRange);
+        }
+    }
+
+    removeFloatingMenu();
+}
+
+function openSettings() {
+    chrome.runtime.openOptionsPage();
     removeFloatingMenu();
 }
 
@@ -426,13 +809,11 @@ function formatText(style) {
 async function rewriteSelectedText() {
     const selectedText = getSelectedText();
     if (!selectedText || selectedText.length < 2) {
-        console.log("⚠️ Nenhum texto selecionado para reescrita.");
+        showNotification("Por favor, selecione um texto para reescrever.", "error");
         return;
     }
 
-    console.log("🤖 Enviando texto para reescrita IA:", selectedText);
-    
-    // Mostrar indicador de carregamento no lugar do menu
+    // Mostrar indicador de carregamento
     if (floatingMenu) {
         floatingMenu.innerHTML = '<div class="loading-spinner"></div><div>Reescrevendo...</div>';
     } else {
@@ -453,12 +834,12 @@ async function rewriteSelectedText() {
         // Aplicar o texto reescrito
         applyRewrittenText(rewrittenText);
         
-        console.log("✅ Texto reescrito com IA:", rewrittenText);
+        showNotification("Texto reescrito com sucesso!", "success");
     } catch (error) {
         console.error("❌ Erro ao reescrever texto com IA:", error);
         
         // Mostrar mensagem de erro para o usuário
-        showErrorNotification("Não foi possível reescrever o texto. Tente novamente mais tarde.");
+        showNotification("Não foi possível reescrever o texto. Tente novamente mais tarde.", "error");
     } finally {
         // Esconder indicador de carregamento
         hideLoadingIndicator();
@@ -514,64 +895,10 @@ function applyRewrittenText(rewrittenText) {
     }
 }
 
-/**
- * Mostra um indicador de carregamento na página
- */
-function showLoadingIndicator() {
-    // Verifica se já existe um indicador
-    let indicator = document.getElementById('blip-loading-indicator');
-    
-    if (!indicator) {
-        // Cria um novo indicador
-        indicator = document.createElement('div');
-        indicator.id = 'blip-loading-indicator';
-        indicator.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Reescrevendo texto...</div>
-        `;
-        document.body.appendChild(indicator);
-    }
-    
-    // Posiciona e mostra o indicador
-    indicator.style.display = 'flex';
-}
+/* ==========================
+   MENU DE EMOJIS
+========================== */
 
-/**
- * Esconde o indicador de carregamento
- */
-function hideLoadingIndicator() {
-    const indicator = document.getElementById('blip-loading-indicator');
-    if (indicator) {
-        indicator.style.display = 'none';
-    }
-}
-
-/**
- * Mostra uma notificação de erro
- * @param {string} message - Mensagem de erro
- */
-function showErrorNotification(message) {
-    // Cria elemento de notificação
-    const notification = document.createElement('div');
-    notification.className = 'blip-notification error';
-    notification.innerHTML = `
-        <div class="notification-icon">❌</div>
-        <div class="notification-message">${message}</div>
-    `;
-    
-    // Adiciona à página
-    document.body.appendChild(notification);
-    
-    // Remove após alguns segundos
-    setTimeout(() => {
-        notification.classList.add('fadeOut');
-        setTimeout(() => notification.remove(), 500);
-    }, 3000);
-}
-
-/**
- * Mostra o menu de emojis
- */
 function showEmojiMenu() {
     if (!activeInput || !isEditable(activeInput)) return;
     
@@ -583,54 +910,141 @@ function showEmojiMenu() {
     floatingMenu.id = "blip-emoji-menu";
     floatingMenu.className = "blip-floating-menu emoji-menu";
     
-    // Lista de emojis populares
-    const popularEmojis = [
-        "😊", "👍", "👋", "🙏", "❤️", "👏", "🎉", "🔥", 
-        "✨", "⭐", "✅", "⚠️", "📌", "💡", "📊", "🚀",
-        "📝", "📅", "💪", "🤔", "👀", "🔍", "📣", "🎯"
-    ];
+    // Lista de emojis populares com categorias
+    const emojiCategories = {
+        "Recente": ["👍", "❤️", "✅", "🎉", "👋", "🙏", "💯", "🔥"],
+        "Sorrisos": ["😊", "😂", "😍", "😭", "😎", "😁", "😒", "🥰", "😔", "🤔", "😉", "😌"],
+        "Gestos": ["👍", "👋", "🙏", "👏", "🤝", "✌️", "👌", "🤞", "🤟", "🤘", "👆", "👉"],
+        "Objetos": ["📱", "💻", "🖥️", "⌨️", "📝", "📊", "📈", "📚", "🗓️", "📌", "📧", "🔍"],
+        "Símbolos": ["❤️", "✅", "⚠️", "🚫", "💯", "⭐", "🔥", "👍", "👎", "❓", "‼️", "✨"]
+    };
     
-    // Adiciona os emojis ao menu
-    let emojiContent = '<div class="emoji-container">';
-    popularEmojis.forEach(emoji => {
-        emojiContent += `<button class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`;
+    // Criar o HTML do menu
+    let emojiMenuHTML = `
+        <div class="emoji-header">
+            <h3>Escolha um emoji</h3>
+            <button class="emoji-close-btn">×</button>
+        </div>
+        <div class="emoji-categories-tabs">
+    `;
+    
+    // Adicionar as abas de categorias
+    Object.keys(emojiCategories).forEach((category, index) => {
+        emojiMenuHTML += `
+            <button class="category-tab ${index === 0 ? 'active' : ''}" data-category="${category}">
+                ${category}
+            </button>
+        `;
     });
-    emojiContent += '</div>';
     
-    // Adiciona categorias (opcional)
-    emojiContent += `
-        <div class="emoji-categories">
-            <button data-category="recent" class="active">Recentes</button>
-            <button data-category="smileys">Sorrisos</button>
-            <button data-category="objects">Objetos</button>
-            <button data-category="symbols">Símbolos</button>
+    emojiMenuHTML += `
+        </div>
+        <div class="emoji-content">
+    `;
+    
+    // Adicionar os contêineres de emojis para cada categoria
+    Object.keys(emojiCategories).forEach((category, index) => {
+        emojiMenuHTML += `
+            <div class="emoji-container ${index === 0 ? 'active' : ''}" data-category="${category}">
+        `;
+        
+        emojiCategories[category].forEach(emoji => {
+            emojiMenuHTML += `
+                <button class="emoji-btn" data-emoji="${emoji}">${emoji}</button>
+            `;
+        });
+        
+        emojiMenuHTML += `
+            </div>
+        `;
+    });
+    
+    emojiMenuHTML += `
+        </div>
+        <div class="emoji-search">
+            <input type="text" placeholder="Buscar emoji..." class="emoji-search-input">
         </div>
     `;
     
-    floatingMenu.innerHTML = emojiContent;
+    floatingMenu.innerHTML = emojiMenuHTML;
     document.body.appendChild(floatingMenu);
     
-    // Posiciona perto do cursor ou input
-    if (activeInput.tagName === "INPUT" || activeInput.tagName === "TEXTAREA") {
+    // Posiciona o menu
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        updateTooltipPosition(rect);
+    } else if (activeInput) {
         const rect = activeInput.getBoundingClientRect();
         updateTooltipPosition(rect);
-    } else {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            updateTooltipPosition(rect);
-        }
     }
     
-    // Adiciona eventos aos botões de emoji
+    // Adicionar eventos
+    
+    // Botão de fechar
+    floatingMenu.querySelector('.emoji-close-btn').addEventListener('click', removeFloatingMenu);
+    
+    // Botões de emoji
     floatingMenu.querySelectorAll('.emoji-btn').forEach(btn => {
         btn.addEventListener('click', insertEmoji);
     });
     
-    // Adiciona eventos às categorias
-    floatingMenu.querySelectorAll('.emoji-categories button').forEach(btn => {
-        btn.addEventListener('click', switchEmojiCategory);
+    // Abas de categorias
+    floatingMenu.querySelectorAll('.category-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            // Remover classe ativa de todas as abas e contêineres
+            floatingMenu.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            floatingMenu.querySelectorAll('.emoji-container').forEach(c => c.classList.remove('active'));
+            
+            // Adicionar classe ativa à aba clicada e ao contêiner correspondente
+            e.target.classList.add('active');
+            const category = e.target.dataset.category;
+            floatingMenu.querySelector(`.emoji-container[data-category="${category}"]`).classList.add('active');
+        });
+    });
+    
+    // Campo de busca
+    const searchInput = floatingMenu.querySelector('.emoji-search-input');
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        
+        if (searchTerm.length === 0) {
+            // Restaurar a visualização normal das categorias
+            floatingMenu.querySelectorAll('.emoji-container').forEach(container => {
+                container.querySelectorAll('.emoji-btn').forEach(btn => {
+                    btn.style.display = 'block';
+                });
+            });
+            return;
+        }
+        
+        // Filtrar emojis em todas as categorias
+        floatingMenu.querySelectorAll('.emoji-container').forEach(container => {
+            let hasVisibleEmojis = false;
+            
+            container.querySelectorAll('.emoji-btn').forEach(btn => {
+                const emoji = btn.textContent;
+                const category = container.dataset.category.toLowerCase();
+                
+                // Mostrar apenas emojis que correspondem à busca
+                if (emoji.includes(searchTerm) || category.includes(searchTerm)) {
+                    btn.style.display = 'block';
+                    hasVisibleEmojis = true;
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+            
+            // Mostrar/esconder categorias inteiras com base na busca
+            if (hasVisibleEmojis) {
+                container.classList.add('active');
+                floatingMenu.querySelector(`.category-tab[data-category="${container.dataset.category}"]`).classList.add('active');
+            } else {
+                container.classList.remove('active');
+                floatingMenu.querySelector(`.category-tab[data-category="${container.dataset.category}"]`).classList.remove('active');
+            }
+        });
     });
 }
 
@@ -680,92 +1094,80 @@ function storeRecentEmoji(emoji) {
         // Adiciona ao início
         recentEmojis.unshift(emoji);
         
-        // Limita a 12 emojis recentes
-        recentEmojis = recentEmojis.slice(0, 12);
+        // Limita a 8 emojis recentes
+        recentEmojis = recentEmojis.slice(0, 8);
         
         // Salva no storage
         chrome.storage.local.set({ recentEmojis });
     });
 }
 
+/* ==========================
+   NOTIFICAÇÕES E INDICADORES
+========================== */
+
 /**
- * Muda a categoria de emojis exibida
- * @param {Event} event - Evento de clique
+ * Mostra um indicador de carregamento na página
  */
-function switchEmojiCategory(event) {
-    const category = event.target.dataset.category;
-    if (!category || !floatingMenu) return;
+function showLoadingIndicator() {
+    // Verifica se já existe um indicador
+    let indicator = document.getElementById('blip-loading-indicator');
     
-    // Atualiza a classe ativa nos botões de categoria
-    floatingMenu.querySelectorAll('.emoji-categories button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.category === category);
-    });
-    
-    // Se for a categoria "recentes", carrega do storage
-    if (category === 'recent') {
-        loadRecentEmojis();
-        return;
+    if (!indicator) {
+        // Cria um novo indicador
+        indicator = document.createElement('div');
+        indicator.id = 'blip-loading-indicator';
+        indicator.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Reescrevendo texto...</div>
+        `;
+        document.body.appendChild(indicator);
     }
     
-    // Para outras categorias, carregar os emojis apropriados
-    let emojis = [];
-    
-    switch (category) {
-        case 'smileys':
-            emojis = ["😊", "😂", "😍", "😭", "😎", "😁", "😒", "🥰", "😔", "🤔", "😉", "😌"];
-            break;
-        case 'objects':
-            emojis = ["📱", "💻", "🖥️", "⌨️", "📝", "📊", "📈", "📚", "🗓️", "📌", "📧", "🔍"];
-            break;
-        case 'symbols':
-            emojis = ["❤️", "✅", "⚠️", "🚫", "💯", "⭐", "🔥", "👍", "👎", "❓", "‼️", "✨"];
-            break;
-        default:
-            return;
-    }
-    
-    // Atualiza o conteúdo do menu de emojis
-    updateEmojiContainer(emojis);
+    // Posiciona e mostra o indicador
+    indicator.style.display = 'flex';
 }
 
 /**
- * Carrega emojis recentes do storage
+ * Esconde o indicador de carregamento
  */
-function loadRecentEmojis() {
-    chrome.storage.local.get(['recentEmojis'], (result) => {
-        let recentEmojis = result.recentEmojis || [];
-        
-        // Se não houver emojis recentes, usar alguns padrão
-        if (recentEmojis.length === 0) {
-            recentEmojis = ["👍", "❤️", "✅", "🎉", "👋", "🙏", "💯", "🔥"];
-        }
-        
-        updateEmojiContainer(recentEmojis);
-    });
+function hideLoadingIndicator() {
+    const indicator = document.getElementById('blip-loading-indicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
 }
 
 /**
- * Atualiza o contêiner de emojis com novos emojis
- * @param {Array} emojis - Lista de emojis a exibir
+ * Mostra uma notificação
+ * @param {string} message - Mensagem a ser exibida
+ * @param {string} type - Tipo de notificação (success, error, info)
  */
-function updateEmojiContainer(emojis) {
-    if (!floatingMenu) return;
+function showNotification(message, type = 'info') {
+    // Cria elemento de notificação
+    const notification = document.createElement('div');
+    notification.className = `blip-notification ${type}`;
     
-    const container = floatingMenu.querySelector('.emoji-container');
-    if (!container) return;
+    // Ícones para cada tipo de notificação
+    const icons = {
+        success: '✅',
+        error: '❌',
+        info: 'ℹ️'
+    };
     
-    // Limpa o contêiner
-    container.innerHTML = '';
+    notification.innerHTML = `
+        <div class="notification-icon">${icons[type] || 'ℹ️'}</div>
+        <div class="notification-message">${message}</div>
+    `;
     
-    // Adiciona os novos emojis
-    emojis.forEach(emoji => {
-        const btn = document.createElement('button');
-        btn.className = 'emoji-btn';
-        btn.dataset.emoji = emoji;
-        btn.textContent = emoji;
-        btn.addEventListener('click', insertEmoji);
-        container.appendChild(btn);
-    });
+    // Adiciona à página
+    document.body.appendChild(notification);
+    
+    // Remove após alguns segundos
+    setTimeout(() => {
+        notification.classList.add('fadeOut');
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
 }
 
 // Inicializa o script

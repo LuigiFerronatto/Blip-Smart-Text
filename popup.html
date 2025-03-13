@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blip SmartText</title>
   <link rel="stylesheet" href="styles/popup.css">
-  <script type="module" src="scripts/popup.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="popup-container">
@@ -28,6 +28,10 @@
           <i class="icon">👤</i>
           <span>Perfis</span>
         </button>
+        <button class="nav-item" data-screen="settings">
+          <i class="icon">⚙️</i>
+          <span>Config</span>
+        </button>
         <button class="nav-item" data-screen="help">
           <i class="icon">❓</i>
           <span>Ajuda</span>
@@ -49,17 +53,17 @@
 
         <div class="feature-grid">
           <div class="feature-card">
-            <div class="feature-icon">✏️</div>
+            <div class="feature-icon format-icon">✏️</div>
             <h3>Formatação Rápida</h3>
             <p>Formate texto instantaneamente com estilos inteligentes</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">🤖</div>
+            <div class="feature-icon ai-icon">🤖</div>
             <h3>Reescrita com IA</h3>
             <p>Melhore seus textos com IA generativa</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon">😊</div>
+            <div class="feature-icon emoji-icon">😊</div>
             <h3>Emojis Inteligentes</h3>
             <p>Adicione expressividade com sugestões contextuais</p>
           </div>
@@ -72,6 +76,17 @@
           <button class="btn btn-secondary" id="config-btn">
             ⚙️ Configurações
           </button>
+        </div>
+
+        <div class="status-section">
+          <div class="status-item">
+            <span class="status-label">Status:</span>
+            <span class="status-value active" id="extension-status">Ativo</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Perfil:</span>
+            <span class="status-value" id="current-profile">Profissional</span>
+          </div>
         </div>
       </section>
 
@@ -111,7 +126,11 @@
               </label>
               <label>
                 <input type="checkbox" id="cognitive-bias">
-                Aplicar Viés Cognitivo
+                Aplicar técnicas persuasivas
+              </label>
+              <label>
+                <input type="checkbox" id="add-emojis">
+                Adicionar emojis
               </label>
             </div>
 
@@ -129,6 +148,11 @@
               readonly
             ></textarea>
           </div>
+
+          <div class="output-actions">
+            <button class="btn btn-secondary" id="copy-output">📋 Copiar</button>
+            <button class="btn btn-secondary" id="save-output">💾 Salvar</button>
+          </div>
         </div>
       </section>
 
@@ -142,38 +166,134 @@
         <div class="profiles-container">
           <div class="profile-selector">
             <select id="profile-list" class="form-control">
-              <option>Perfil Padrão</option>
-              <option>Trabalho</option>
-              <option>Pessoal</option>
+              <option value="default">Perfil Padrão</option>
+              <option value="professional">Profissional</option>
+              <option value="casual">Casual</option>
+              <option value="marketing">Marketing</option>
+              <option value="technical">Técnico</option>
             </select>
             <div class="profile-actions">
-              <button class="btn btn-secondary">➕ Novo</button>
-              <button class="btn btn-delete">🗑️ Excluir</button>
+              <button class="btn btn-secondary" id="new-profile-btn">➕ Novo</button>
+              <button class="btn btn-delete" id="delete-profile-btn">🗑️ Excluir</button>
             </div>
           </div>
 
           <div class="profile-details">
             <div class="input-group">
-              <label>Nome do Perfil</label>
-              <input type="text" class="form-control" placeholder="Nome do perfil">
+              <label for="profile-name">Nome do Perfil</label>
+              <input type="text" id="profile-name" class="form-control" placeholder="Nome do perfil">
             </div>
             <div class="input-group">
-              <label>Estilo Padrão</label>
-              <select class="form-control">
-                <option>Profissional</option>
-                <option>Casual</option>
-                <option>Criativo</option>
+              <label for="profile-style">Estilo Padrão</label>
+              <select id="profile-style" class="form-control">
+                <option value="professional">Profissional</option>
+                <option value="casual">Casual</option>
+                <option value="creative">Criativo</option>
+                <option value="technical">Técnico</option>
+                <option value="persuasive">Persuasivo</option>
               </select>
             </div>
             <div class="checkbox-group">
               <label>
-                <input type="checkbox"> Otimização UX
+                <input type="checkbox" id="profile-ux"> Otimização UX
               </label>
               <label>
-                <input type="checkbox"> Viés Cognitivo
+                <input type="checkbox" id="profile-bias"> Técnicas persuasivas
+              </label>
+              <label>
+                <input type="checkbox" id="profile-emoji"> Adicionar emojis
+              </label>
+              <label>
+                <input type="checkbox" id="profile-auto"> Auto-reescrever ao selecionar
               </label>
             </div>
-            <button class="btn btn-primary">💾 Salvar Perfil</button>
+            <div class="input-group">
+              <label for="profile-prompt">Instruções Personalizadas (opcional)</label>
+              <textarea id="profile-prompt" class="form-control" placeholder="Adicione instruções específicas para a IA..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="save-profile-btn">💾 Salvar Perfil</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela de Configurações -->
+      <section id="settings-screen" class="screen">
+        <header>
+          <h2>Configurações</h2>
+          <p>Personalize o funcionamento da extensão</p>
+        </header>
+
+        <div class="settings-container">
+          <div class="settings-group">
+            <h3>Configurações Gerais</h3>
+            
+            <div class="input-group">
+              <label for="default-profile">Perfil Padrão</label>
+              <select id="default-profile" class="form-control">
+                <option value="default">Perfil Padrão</option>
+                <option value="professional">Profissional</option>
+                <option value="casual">Casual</option>
+                <option value="marketing">Marketing</option>
+                <option value="technical">Técnico</option>
+              </select>
+            </div>
+            
+            <div class="toggle-group">
+              <label class="toggle-label">
+                <span>Menu flutuante ao selecionar texto</span>
+                <label class="switch">
+                  <input type="checkbox" id="floating-menu-toggle" checked>
+                  <span class="slider round"></span>
+                </label>
+              </label>
+              
+              <label class="toggle-label">
+                <span>Botão fixo de IA</span>
+                <label class="switch">
+                  <input type="checkbox" id="fixed-button-toggle" checked>
+                  <span class="slider round"></span>
+                </label>
+              </label>
+              
+              <label class="toggle-label">
+                <span>Atalhos de teclado</span>
+                <label class="switch">
+                  <input type="checkbox" id="keyboard-shortcuts-toggle" checked>
+                  <span class="slider round"></span>
+                </label>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3>Configuração da API</h3>
+            
+            <div class="input-group">
+              <label for="api-key">Chave da API</label>
+              <div class="api-key-input">
+                <input type="password" id="api-key" class="form-control" placeholder="Chave da API">
+                <button id="toggle-api-key" class="icon-button">👁️</button>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label for="api-url">URL da API</label>
+              <input type="text" id="api-url" class="form-control" placeholder="URL da API">
+            </div>
+            
+            <div class="input-group">
+              <label for="model-select">Modelo de IA</label>
+              <select id="model-select" class="form-control">
+                <option value="gpt-4-0613">GPT-4</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="text-davinci-003">Davinci</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="settings-actions">
+            <button class="btn btn-primary" id="save-settings-btn">💾 Salvar Configurações</button>
+            <button class="btn btn-secondary" id="reset-settings-btn">🔄 Restaurar Padrões</button>
           </div>
         </div>
       </section>
@@ -187,29 +307,94 @@
 
         <div class="help-topics">
           <div class="help-card">
+            <div class="help-icon">📝</div>
             <h3>Formatação</h3>
             <p>Aprenda a formatar texto rapidamente</p>
-            <a href="#" class="btn btn-secondary">Ver Guia</a>
+            <button class="btn btn-secondary help-topic-btn" data-topic="formatting">Ver Guia</button>
           </div>
           <div class="help-card">
+            <div class="help-icon">🤖</div>
             <h3>Reescrita IA</h3>
             <p>Dicas para melhorar seus textos</p>
-            <a href="#" class="btn btn-secondary">Ver Guia</a>
+            <button class="btn btn-secondary help-topic-btn" data-topic="ai-writing">Ver Guia</button>
           </div>
           <div class="help-card">
+            <div class="help-icon">😀</div>
             <h3>Emojis</h3>
             <p>Como usar emojis inteligentemente</p>
-            <a href="#" class="btn btn-secondary">Ver Guia</a>
+            <button class="btn btn-secondary help-topic-btn" data-topic="emojis">Ver Guia</button>
+          </div>
+        </div>
+
+        <div class="help-content" id="help-content">
+          <div class="help-content-header">
+            <h3 id="help-content-title">Selecione um tópico</h3>
+            <button class="btn-icon" id="close-help-content">×</button>
+          </div>
+          <div class="help-content-body" id="help-content-body">
+            <p>Clique em um dos tópicos acima para ver o conteúdo de ajuda.</p>
           </div>
         </div>
 
         <div class="feedback-section">
           <h3>Precisa de Suporte?</h3>
-          <p>Entre em contato conosco</p>
-          <a href="mailto:suporte@blip.ai" class="btn btn-primary">📧 Contato</a>
+          <p>Entre em contato conosco ou visite nossa documentação completa</p>
+          <div class="support-actions">
+            <a href="mailto:suporte@blip.ai" class="btn btn-secondary">📧 Contato</a>
+            <a href="https://blip.ai/docs" target="_blank" class="btn btn-primary">📚 Documentação</a>
+          </div>
         </div>
       </section>
     </main>
   </div>
+
+  <!-- Modais -->
+  <div class="modal" id="new-profile-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Criar Novo Perfil</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label for="new-profile-name">Nome do Perfil</label>
+          <input type="text" id="new-profile-name" class="form-control" placeholder="Ex: Marketing, Técnico, Formal...">
+        </div>
+        <div class="input-group">
+          <label for="new-profile-base">Baseado em</label>
+          <select id="new-profile-base" class="form-control">
+            <option value="default">Perfil Padrão</option>
+            <option value="professional">Profissional</option>
+            <option value="casual">Casual</option>
+            <option value="marketing">Marketing</option>
+            <option value="technical">Técnico</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Cancelar</button>
+        <button class="btn btn-primary" id="create-profile-btn">Criar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="delete-profile-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Excluir Perfil</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <p>Tem certeza que deseja excluir o perfil <strong id="delete-profile-name">Perfil</strong>?</p>
+        <p class="warning-text">Esta ação não pode ser desfeita.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">Cancelar</button>
+        <button class="btn btn-delete" id="confirm-delete-btn">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts/popup.js"></script>
 </body>
 </html>

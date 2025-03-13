@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Blip SmartText",
+  "name": "SmartText",
   "version": "1.0",
   "description": "Floating toolbar for text formatting, emoji insertion, and AI rewriting.",
   "icons": {
