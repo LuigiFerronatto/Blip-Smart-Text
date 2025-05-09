@@ -294,49 +294,6 @@
     </div>
   </div>
 
-  <!-- Modals -->
-  <div id="new-profile-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Create New Profile</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="input-group">
-          <label for="new-profile-name">Profile Name</label>
-          <input type="text" id="new-profile-name" class="form-control" placeholder="Enter profile name">
-        </div>
-        <div class="input-group">
-          <label for="new-profile-base">Base on Existing</label>
-          <select id="new-profile-base" class="form-control">
-            <!-- Profiles will be loaded dynamically -->
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary modal-close">Cancel</button>
-        <button id="create-profile-btn" class="btn btn-primary">Create</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="delete-profile-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Delete Profile</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to delete the profile <strong id="delete-profile-name">Profile Name</strong>?</p>
-        <p class="warning-text">This action cannot be undone.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary modal-close">Cancel</button>
-        <button id="confirm-delete-btn" class="btn btn-delete">Delete</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Scripts -->
   <script src="scripts/popup.js" type="module"></script>
 </body>

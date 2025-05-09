@@ -3,9 +3,6 @@
  * Script to control the popup UI of the SmartText extension
  */
 
-import { getProfiles, getSelectedProfile, setSelectedProfile, getSettings } from '../modules/storage.js';
-import { showToast, adjustTextareaHeight } from '../modules/ui.js';
-
 // Global state
 const state = {
   profiles: {},
@@ -29,6 +26,8 @@ async function init() {
     setupNavigation();
     setupQuickActions();
     setupAIWriting();
+    setupProfiles();
+    setupSettings();
     checkExtensionStatus();
     
     // Adjust textarea heights
@@ -52,13 +51,16 @@ async function init() {
 async function loadData() {
   try {
     // Get profiles
-    state.profiles = await getProfiles();
+    const profilesResult = await chrome.storage.local.get('smarttext_profiles');
+    state.profiles = profilesResult.smarttext_profiles || {};
     
     // Get selected profile
-    state.selectedProfile = await getSelectedProfile();
+    const selectedProfileResult = await chrome.storage.local.get('smarttext_selected_profile');
+    state.selectedProfile = selectedProfileResult.smarttext_selected_profile || {};
     
     // Get settings
-    state.settings = await getSettings();
+    const settingsResult = await chrome.storage.local.get('smarttext_settings');
+    state.settings = settingsResult.smarttext_settings || {};
     
     // Update profile display
     updateCurrentProfileDisplay();
@@ -165,17 +167,22 @@ function setupAIWriting() {
           addEmojis: addEmojis.checked
         };
         
-        // Get AI module from background script
-        const aiModule = await getAIModule();
+        // Direct call to background script for rewriting
+        const result = await chrome.runtime.sendMessage({
+          action: "rewriteText",
+          text: text,
+          profile: tempProfile
+        });
         
-        // Rewrite text
-        const rewrittenText = await aiModule.rewriteText(text, tempProfile);
-        
-        // Show result
-        aiOutput.value = rewrittenText;
-        adjustTextareaHeight(aiOutput);
-        
-        showToast("Text rewritten successfully!", "success");
+        if (result && result.success) {
+          // Show result
+          aiOutput.value = result.rewrittenText;
+          adjustTextareaHeight(aiOutput);
+          
+          showToast("Text rewritten successfully!", "success");
+        } else {
+          throw new Error(result.error || "Failed to rewrite text");
+        }
       } catch (error) {
         console.error("❌ Error rewriting text:", error);
         showToast(error.message || "Error rewriting text", "error");
@@ -234,6 +241,380 @@ function setupAIWriting() {
 }
 
 /**
+ * Set up profiles screen
+ */
+function setupProfiles() {
+  const profileList = document.getElementById('profile-list');
+  const profileName = document.getElementById('profile-name');
+  const profileStyle = document.getElementById('profile-style');
+  const profileUx = document.getElementById('profile-ux');
+  const profileBias = document.getElementById('profile-bias');
+  const profileEmoji = document.getElementById('profile-emoji');
+  const profileAuto = document.getElementById('profile-auto');
+  const saveProfileBtn = document.getElementById('save-profile-btn');
+  const newProfileBtn = document.getElementById('new-profile-btn');
+  const deleteProfileBtn = document.getElementById('delete-profile-btn');
+  
+  // Skip if elements not found (not on profiles screen)
+  if (!profileList || !saveProfileBtn) return;
+
+  // Load profiles into dropdown
+  populateProfilesDropdown(profileList);
+  
+  // Handle profile selection change
+  profileList.addEventListener('change', () => {
+    loadProfileDetails(profileList.value);
+  });
+  
+  // Handle save profile button
+  saveProfileBtn.addEventListener('click', () => {
+    saveCurrentProfile();
+  });
+  
+  // Handle new profile button
+  if (newProfileBtn) {
+    newProfileBtn.addEventListener('click', () => {
+      createNewProfile();
+    });
+  }
+  
+  // Handle delete profile button
+  if (deleteProfileBtn) {
+    deleteProfileBtn.addEventListener('click', () => {
+      deleteCurrentProfile();
+    });
+  }
+  
+  // Load initial profile details
+  if (profileList.value) {
+    loadProfileDetails(profileList.value);
+  }
+}
+
+/**
+ * Populate profile dropdown
+ */
+function populateProfilesDropdown(selectElement) {
+  // Clear current options
+  selectElement.innerHTML = '';
+  
+  // Add options for each profile
+  Object.entries(state.profiles).forEach(([id, profile]) => {
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = profile.name;
+    selectElement.appendChild(option);
+  });
+}
+
+/**
+ * Load profile details into form
+ */
+function loadProfileDetails(profileId) {
+  const profile = state.profiles[profileId];
+  if (!profile) return;
+  
+  // Set form values
+  document.getElementById('profile-name').value = profile.name || '';
+  document.getElementById('profile-name').disabled = profileId === 'default';
+  
+  document.getElementById('profile-style').value = profile.style || 'Professional';
+  document.getElementById('profile-ux').checked = !!profile.uxWriting;
+  document.getElementById('profile-bias').checked = !!profile.cognitiveBias;
+  document.getElementById('profile-emoji').checked = !!profile.addEmojis;
+  document.getElementById('profile-auto').checked = !!profile.autoRewrite;
+}
+
+/**
+ * Save current profile
+ */
+async function saveCurrentProfile() {
+  try {
+    const profileList = document.getElementById('profile-list');
+    const profileId = profileList.value;
+    
+    if (!profileId) {
+      showToast("No profile selected", "error");
+      return;
+    }
+    
+    // Get profile data from form
+    const profileData = {
+      name: document.getElementById('profile-name').value.trim(),
+      style: document.getElementById('profile-style').value,
+      uxWriting: document.getElementById('profile-ux').checked,
+      cognitiveBias: document.getElementById('profile-bias').checked,
+      addEmojis: document.getElementById('profile-emoji').checked,
+      autoRewrite: document.getElementById('profile-auto').checked
+    };
+    
+    // Validate name
+    if (!profileData.name) {
+      showToast("Profile name cannot be empty", "error");
+      return;
+    }
+    
+    // Get existing profiles
+    const profilesResult = await chrome.storage.local.get('smarttext_profiles');
+    const profiles = profilesResult.smarttext_profiles || {};
+    
+    // Update profile
+    profiles[profileId] = profileData;
+    
+    // Save to storage
+    await chrome.storage.local.set({ 'smarttext_profiles': profiles });
+    
+    // Update state
+    state.profiles = profiles;
+    
+    // Show success message
+    showToast("Profile saved successfully", "success");
+  } catch (error) {
+    console.error("Error saving profile:", error);
+    showToast("Error saving profile", "error");
+  }
+}
+
+/**
+ * Create a new profile
+ */
+async function createNewProfile() {
+  try {
+    // Prompt for name
+    const name = prompt("Enter a name for the new profile:");
+    if (!name || name.trim().length === 0) return;
+    
+    // Create profile ID
+    const profileId = 'profile_' + Date.now();
+    
+    // Create profile data
+    const profileData = {
+      name: name.trim(),
+      style: 'Professional',
+      uxWriting: false,
+      cognitiveBias: false,
+      addEmojis: false,
+      autoRewrite: false
+    };
+    
+    // Get existing profiles
+    const profilesResult = await chrome.storage.local.get('smarttext_profiles');
+    const profiles = profilesResult.smarttext_profiles || {};
+    
+    // Add new profile
+    profiles[profileId] = profileData;
+    
+    // Save to storage
+    await chrome.storage.local.set({ 'smarttext_profiles': profiles });
+    
+    // Update state
+    state.profiles = profiles;
+    
+    // Refresh profiles dropdown
+    const profileList = document.getElementById('profile-list');
+    populateProfilesDropdown(profileList);
+    
+    // Select new profile
+    profileList.value = profileId;
+    loadProfileDetails(profileId);
+    
+    // Show success message
+    showToast("New profile created", "success");
+  } catch (error) {
+    console.error("Error creating profile:", error);
+    showToast("Error creating profile", "error");
+  }
+}
+
+/**
+ * Delete the current profile
+ */
+async function deleteCurrentProfile() {
+  try {
+    const profileList = document.getElementById('profile-list');
+    const profileId = profileList.value;
+    
+    if (!profileId) {
+      showToast("No profile selected", "error");
+      return;
+    }
+    
+    // Can't delete default profile
+    if (profileId === 'default') {
+      showToast("Cannot delete default profile", "error");
+      return;
+    }
+    
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete the profile "${state.profiles[profileId].name}"?`)) {
+      return;
+    }
+    
+    // Get existing profiles
+    const profilesResult = await chrome.storage.local.get('smarttext_profiles');
+    const profiles = profilesResult.smarttext_profiles || {};
+    
+    // Delete profile
+    delete profiles[profileId];
+    
+    // Save to storage
+    await chrome.storage.local.set({ 'smarttext_profiles': profiles });
+    
+    // Update state
+    state.profiles = profiles;
+    
+    // Refresh profiles dropdown
+    populateProfilesDropdown(profileList);
+    
+    // Select default profile
+    profileList.value = 'default';
+    loadProfileDetails('default');
+    
+    // Show success message
+    showToast("Profile deleted", "success");
+  } catch (error) {
+    console.error("Error deleting profile:", error);
+    showToast("Error deleting profile", "error");
+  }
+}
+
+/**
+ * Set up settings screen
+ */
+function setupSettings() {
+  const saveSettingsBtn = document.getElementById('save-settings-btn');
+  const resetSettingsBtn = document.getElementById('reset-settings-btn');
+  const floatingMenuToggle = document.getElementById('floating-menu-toggle');
+  const fixedButtonToggle = document.getElementById('fixed-button-toggle');
+  const keyboardShortcutsToggle = document.getElementById('keyboard-shortcuts-toggle');
+  const apiKey = document.getElementById('api-key');
+  const apiUrl = document.getElementById('api-url');
+  const modelSelect = document.getElementById('model-select');
+  const defaultProfile = document.getElementById('default-profile');
+  const toggleApiKey = document.getElementById('toggle-api-key');
+  
+  // Skip if elements not found (not on settings screen)
+  if (!saveSettingsBtn || !resetSettingsBtn) return;
+  
+  // Load current settings
+  if (state.settings) {
+    if (floatingMenuToggle) floatingMenuToggle.checked = state.settings.floatingMenu !== false;
+    if (fixedButtonToggle) fixedButtonToggle.checked = state.settings.fixedButton !== false;
+    if (keyboardShortcutsToggle) keyboardShortcutsToggle.checked = state.settings.keyboardShortcuts !== false;
+    if (apiKey) apiKey.value = state.settings.apiKey || '';
+    if (apiUrl) apiUrl.value = state.settings.apiUrl || '';
+    if (modelSelect) modelSelect.value = state.settings.model || 'gpt-4o-mini';
+  }
+  
+  // Populate default profile dropdown
+  if (defaultProfile) {
+    populateProfilesDropdown(defaultProfile);
+    defaultProfile.value = state.settings.defaultProfile || 'default';
+  }
+  
+  // Toggle API key visibility
+  if (toggleApiKey && apiKey) {
+    toggleApiKey.addEventListener('click', () => {
+      if (apiKey.type === 'password') {
+        apiKey.type = 'text';
+        toggleApiKey.textContent = '🔒';
+      } else {
+        apiKey.type = 'password';
+        toggleApiKey.textContent = '👁️';
+      }
+    });
+  }
+  
+  // Save settings
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', () => {
+      saveSettings();
+    });
+  }
+  
+  // Reset settings
+  if (resetSettingsBtn) {
+    resetSettingsBtn.addEventListener('click', () => {
+      resetSettings();
+    });
+  }
+}
+
+/**
+ * Save settings
+ */
+async function saveSettings() {
+  try {
+    // Get settings from form
+    const settings = {
+      floatingMenu: document.getElementById('floating-menu-toggle').checked,
+      fixedButton: document.getElementById('fixed-button-toggle').checked,
+      keyboardShortcuts: document.getElementById('keyboard-shortcuts-toggle').checked,
+      apiKey: document.getElementById('api-key').value.trim(),
+      apiUrl: document.getElementById('api-url').value.trim(),
+      model: document.getElementById('model-select').value,
+      defaultProfile: document.getElementById('default-profile').value
+    };
+    
+    // Save to storage
+    await chrome.storage.local.set({ 'smarttext_settings': settings });
+    
+    // Update state
+    state.settings = settings;
+    
+    // Show success message
+    showToast("Settings saved successfully", "success");
+  } catch (error) {
+    console.error("Error saving settings:", error);
+    showToast("Error saving settings", "error");
+  }
+}
+
+/**
+ * Reset settings to defaults
+ */
+async function resetSettings() {
+  try {
+    // Confirm reset
+    if (!confirm("Are you sure you want to reset all settings to default values?")) {
+      return;
+    }
+    
+    // Default settings
+    const defaultSettings = {
+      floatingMenu: true,
+      fixedButton: true,
+      keyboardShortcuts: true,
+      apiKey: "9c834290886249ee86da40290caf6379",
+      apiUrl: "https://aoi-east-us.openai.azure.com/openai/deployments/mega-mind-gpt4o-mini/chat/completions?api-version=2024-02-15-preview",
+      model: "gpt-4o-mini",
+      defaultProfile: "default"
+    };
+    
+    // Save to storage
+    await chrome.storage.local.set({ 'smarttext_settings': defaultSettings });
+    
+    // Update state
+    state.settings = defaultSettings;
+    
+    // Update form
+    document.getElementById('floating-menu-toggle').checked = defaultSettings.floatingMenu;
+    document.getElementById('fixed-button-toggle').checked = defaultSettings.fixedButton;
+    document.getElementById('keyboard-shortcuts-toggle').checked = defaultSettings.keyboardShortcuts;
+    document.getElementById('api-key').value = defaultSettings.apiKey;
+    document.getElementById('api-url').value = defaultSettings.apiUrl;
+    document.getElementById('model-select').value = defaultSettings.model;
+    document.getElementById('default-profile').value = defaultSettings.defaultProfile;
+    
+    // Show success message
+    showToast("Settings reset to defaults", "success");
+  } catch (error) {
+    console.error("Error resetting settings:", error);
+    showToast("Error resetting settings", "error");
+  }
+}
+
+/**
  * Check extension status in current tab
  */
 function checkExtensionStatus() {
@@ -263,46 +644,49 @@ function checkExtensionStatus() {
 function updateCurrentProfileDisplay() {
   const currentProfileElem = document.getElementById('current-profile');
   if (currentProfileElem && state.selectedProfile) {
-    currentProfileElem.textContent = state.selectedProfile.name;
+    currentProfileElem.textContent = state.selectedProfile.name || 'Default';
   }
 }
 
 /**
- * Get AI module from background script
- * @returns {Promise<Object>} - AI module with rewriteText method
+ * Show a toast notification
  */
-async function getAIModule() {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ action: "getAIModule" }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error("❌ Error getting AI module:", chrome.runtime.lastError);
-        reject(new Error("Failed to connect to AI service"));
-        return;
-      }
-      
-      if (response && response.success && response.module) {
-        resolve(response.module);
-      } else {
-        reject(new Error("Failed to load AI module"));
-      }
-    });
-  });
+function showToast(message, type = 'info', duration = 3000) {
+  // Remove existing toasts
+  const existingToasts = document.querySelectorAll('.toast');
+  existingToasts.forEach(toast => toast.remove());
+  
+  // Create toast
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</div>
+    <div class="toast-message">${message}</div>
+  `;
+  
+  // Add to document
+  document.body.appendChild(toast);
+  
+  // Show toast
+  setTimeout(() => toast.classList.add('show'), 10);
+  
+  // Hide toast after duration
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
 }
 
 /**
- * Send message to background script
- * @param {string} action - Action to perform
- * @param {Object} data - Data to send
- * @returns {Promise<Object>} - Response from background script
+ * Adjust textarea height
  */
-function sendMessageToBackground(action, data = {}) {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ action, data }, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve(response);
-    });
-  });
+function adjustTextareaHeight(textarea, maxHeight = 200) {
+  if (!textarea) return;
+  
+  // Reset height to calculate scrollHeight correctly
+  textarea.style.height = 'auto';
+  
+  // Set new height
+  const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+  textarea.style.height = `${newHeight}px`;
 }

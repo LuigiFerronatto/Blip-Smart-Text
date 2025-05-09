@@ -26,8 +26,7 @@
       "matches": ["<all_urls>"],
       "js": ["scripts/content.js"],
       "css": ["styles/content.css"],
-      "run_at": "document_end",
-      "type": "module"
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
@@ -35,7 +34,8 @@
       "resources": [
         "scripts/*.js",
         "modules/*.js",
-        "assets/*"
+        "assets/*",
+        "styles/*.css"
       ],
       "matches": ["<all_urls>"]
     }
@@ -74,5 +74,8 @@
       "128": "assets/icons/icon128.png"
     }
   },
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }

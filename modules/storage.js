@@ -6,17 +6,61 @@
 import { STORAGE_KEYS, DEFAULT_PROFILE, DEFAULT_SETTINGS, PREDEFINED_PROFILES } from './config.js';
 
 /**
+ * Função segura para acessar chrome.storage.local.get
+ * Funciona tanto em ambiente de extensão quanto em testes
+ */
+async function safeStorageGet(keys) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get(keys, (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Storage get error:', chrome.runtime.lastError);
+          resolve({});
+        } else {
+          resolve(result || {});
+        }
+      });
+    } catch (error) {
+      console.warn('Storage access error:', error);
+      resolve({});
+    }
+  });
+}
+
+/**
+ * Função segura para acessar chrome.storage.local.set
+ * Funciona tanto em ambiente de extensão quanto em testes
+ */
+async function safeStorageSet(data) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.set(data, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('Storage set error:', chrome.runtime.lastError);
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      console.warn('Storage access error:', error);
+      resolve(false);
+    }
+  });
+}
+
+/**
  * Initialize storage with default values if needed
  * @returns {Promise<boolean>} - Success of operation
  */
 export async function initializeStorage() {
   try {
     // Check if already initialized
-    const isInitialized = await chrome.storage.local.get(['initialized']);
+    const isInitialized = await safeStorageGet(['initialized']);
     
     if (!isInitialized.initialized) {
       // Initialize with predefined profiles
-      await chrome.storage.local.set({
+      await safeStorageSet({
         initialized: true,
         [STORAGE_KEYS.PROFILES]: PREDEFINED_PROFILES,
         [STORAGE_KEYS.SELECTED_PROFILE]: PREDEFINED_PROFILES['default'],
@@ -44,7 +88,7 @@ export async function initializeStorage() {
 export async function saveProfile(profileId, profileData) {
   try {
     // Get existing profiles
-    const result = await chrome.storage.local.get([STORAGE_KEYS.PROFILES]);
+    const result = await safeStorageGet([STORAGE_KEYS.PROFILES]);
     const profiles = result[STORAGE_KEYS.PROFILES] || {};
     
     // Add or update profile
@@ -55,12 +99,12 @@ export async function saveProfile(profileId, profileData) {
     };
     
     // Save to storage
-    await chrome.storage.local.set({
+    await safeStorageSet({
       [STORAGE_KEYS.PROFILES]: profiles
     });
     
     // Check if this is the selected profile and update it if needed
-    const selectedResult = await chrome.storage.local.get([STORAGE_KEYS.SELECTED_PROFILE]);
+    const selectedResult = await safeStorageGet([STORAGE_KEYS.SELECTED_PROFILE]);
     const selectedProfile = selectedResult[STORAGE_KEYS.SELECTED_PROFILE];
     
     if (selectedProfile && selectedProfile.name === profileData.name) {
@@ -80,11 +124,11 @@ export async function saveProfile(profileId, profileData) {
  */
 export async function getProfiles() {
   try {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.PROFILES]);
-    return result[STORAGE_KEYS.PROFILES] || {};
+    const result = await safeStorageGet([STORAGE_KEYS.PROFILES]);
+    return result[STORAGE_KEYS.PROFILES] || PREDEFINED_PROFILES;
   } catch (error) {
     console.error("❌ Error getting profiles:", error);
-    return {};
+    return PREDEFINED_PROFILES;
   }
 }
 
@@ -110,7 +154,7 @@ export async function getProfile(profileId) {
  */
 export async function setSelectedProfile(profile) {
   try {
-    await chrome.storage.local.set({
+    await safeStorageSet({
       [STORAGE_KEYS.SELECTED_PROFILE]: profile
     });
     return true;
@@ -126,8 +170,8 @@ export async function setSelectedProfile(profile) {
  */
 export async function getSelectedProfile() {
   try {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.SELECTED_PROFILE]);
-    return result[STORAGE_KEYS.SELECTED_PROFILE] || { ...DEFAULT_PROFILE };
+    const result = await safeStorageGet([STORAGE_KEYS.SELECTED_PROFILE]);
+    return result[STORAGE_KEYS.SELECTED_PROFILE] || DEFAULT_PROFILE;
   } catch (error) {
     console.error("❌ Error getting selected profile:", error);
     return { ...DEFAULT_PROFILE };
@@ -148,7 +192,7 @@ export async function deleteProfile(profileId) {
     }
     
     // Get existing profiles
-    const result = await chrome.storage.local.get([STORAGE_KEYS.PROFILES]);
+    const result = await safeStorageGet([STORAGE_KEYS.PROFILES]);
     const profiles = result[STORAGE_KEYS.PROFILES] || {};
     
     if (!profiles[profileId]) {
@@ -163,12 +207,12 @@ export async function deleteProfile(profileId) {
     delete profiles[profileId];
     
     // Save updated profiles
-    await chrome.storage.local.set({
+    await safeStorageSet({
       [STORAGE_KEYS.PROFILES]: profiles
     });
     
     // Check if this is the selected profile
-    const selectedResult = await chrome.storage.local.get([STORAGE_KEYS.SELECTED_PROFILE]);
+    const selectedResult = await safeStorageGet([STORAGE_KEYS.SELECTED_PROFILE]);
     const selectedProfile = selectedResult[STORAGE_KEYS.SELECTED_PROFILE];
     
     if (selectedProfile && selectedProfile.name === profileName) {
@@ -177,13 +221,13 @@ export async function deleteProfile(profileId) {
     }
     
     // Check if this is the default profile in settings
-    const settingsResult = await chrome.storage.local.get([STORAGE_KEYS.SETTINGS]);
+    const settingsResult = await safeStorageGet([STORAGE_KEYS.SETTINGS]);
     const settings = settingsResult[STORAGE_KEYS.SETTINGS] || DEFAULT_SETTINGS;
     
     if (settings.defaultProfile === profileId) {
       // Update settings to use default profile
       settings.defaultProfile = 'default';
-      await chrome.storage.local.set({
+      await safeStorageSet({
         [STORAGE_KEYS.SETTINGS]: settings
       });
     }
@@ -202,7 +246,7 @@ export async function deleteProfile(profileId) {
  */
 export async function saveSettings(settings) {
   try {
-    await chrome.storage.local.set({
+    await safeStorageSet({
       [STORAGE_KEYS.SETTINGS]: settings
     });
     return true;
@@ -218,7 +262,7 @@ export async function saveSettings(settings) {
  */
 export async function getSettings() {
   try {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.SETTINGS]);
+    const result = await safeStorageGet([STORAGE_KEYS.SETTINGS]);
     return result[STORAGE_KEYS.SETTINGS] || { ...DEFAULT_SETTINGS };
   } catch (error) {
     console.error("❌ Error getting settings:", error);
@@ -233,7 +277,7 @@ export async function getSettings() {
  */
 export async function saveRecentEmojis(emojis) {
   try {
-    await chrome.storage.local.set({
+    await safeStorageSet({
       [STORAGE_KEYS.RECENT_EMOJIS]: emojis
     });
     return true;
@@ -249,7 +293,7 @@ export async function saveRecentEmojis(emojis) {
  */
 export async function getRecentEmojis() {
   try {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.RECENT_EMOJIS]);
+    const result = await safeStorageGet([STORAGE_KEYS.RECENT_EMOJIS]);
     return result[STORAGE_KEYS.RECENT_EMOJIS] || ["👍", "❤️", "✅", "🎉", "👋", "🙏", "💯", "🔥"];
   } catch (error) {
     console.error("❌ Error getting recent emojis:", error);

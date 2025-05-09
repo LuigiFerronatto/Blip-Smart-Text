@@ -106,8 +106,30 @@ Preserve any key information, technical terms, or specific examples from the ori
  * @returns {Promise<string>} - Text returned by API
  */
 async function makeAPIRequest(promptData) {
-  const { apiKey, url } = API_CONFIG;
+  // Obter a configuração da API - usar os valores armazenados se disponíveis
+  // ou usar os valores padrão do config.js
+  let { apiKey, url } = API_CONFIG;
   
+  try {
+    // Verificar se há valores armazenados
+    const settingsFromStorage = await chrome.storage.local.get('smarttext_settings');
+    if (settingsFromStorage.smarttext_settings) {
+      const storedSettings = settingsFromStorage.smarttext_settings;
+      
+      // Usar valores armazenados apenas se existirem e não estiverem vazios
+      if (storedSettings.apiKey && storedSettings.apiKey.trim() !== '') {
+        apiKey = storedSettings.apiKey;
+      }
+      
+      if (storedSettings.apiUrl && storedSettings.apiUrl.trim() !== '') {
+        url = storedSettings.apiUrl;
+      }
+    }
+  } catch (error) {
+    console.warn("Could not retrieve stored API settings, using defaults:", error);
+  }
+  
+  // Verificar se temos valores para prosseguir
   if (!apiKey || !url) {
     throw new Error("Incomplete API configuration");
   }
@@ -165,10 +187,10 @@ async function makeAPIRequest(promptData) {
   }
 }
 
-// Export a mock AI module for testing
+// Export a mock AI module for testing - útil quando a API não está disponível
 export const mockAiModule = {
   rewriteText: async (text) => {
     console.log("Using mock AI module");
-    return `[MOCK AI] Rewritten: ${text}`;
+    return `[MOCK AI] Improved version: ${text}`;
   }
 };

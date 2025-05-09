@@ -3,18 +3,42 @@
  * Manages the tooltip/floating menu for text selection
  */
 
-import { showToast } from './ui.js';
+// Fallback toast function if UI module fails to load
+const fallbackToast = function(message, type = 'info', duration = 3000) {
+  console.log(`[${type}] ${message}`);
+};
+
+// Global reference to showToast function
+let showToast = fallbackToast;
 
 /**
  * Create and manage the tooltip that appears when text is selected
  */
 export class TooltipManager {
   constructor(settings) {
-    this.settings = settings;
+    this.settings = settings || { floatingMenu: true };
     this.tooltipElement = null;
     this.activeRange = null;
     this.isVisible = false;
     this.formatHandlers = {};
+    
+    // Try to load UI module for toast functionality
+    this.loadUIModule();
+  }
+  
+  /**
+   * Load UI module for toast functionality
+   */
+  async loadUIModule() {
+    try {
+      const uiModule = await import('./ui.js');
+      if (uiModule && uiModule.showToast) {
+        showToast = uiModule.showToast;
+      }
+    } catch (error) {
+      console.warn("Couldn't load UI module, using fallback toast:", error);
+      showToast = fallbackToast;
+    }
   }
   
   /**
@@ -38,9 +62,9 @@ export class TooltipManager {
    */
   registerFormatHandlers() {
     this.formatHandlers = {
-      "bold": (text) => this.formatText("*", text),
-      "italic": (text) => this.formatText("_", text),
-      "strike": (text) => this.formatText("~", text),
+      "bold": (text) => this.formatText("**", text),
+      "italic": (text) => this.formatText("*", text),
+      "strike": (text) => this.formatText("~~", text),
       "code": (text) => this.formatText("`", text),
       "list-ordered": (text) => this.formatList("1. ", text),
       "list-unordered": (text) => this.formatList("- ", text),
@@ -118,7 +142,9 @@ export class TooltipManager {
    */
   create() {
     // Remove existing tooltip if any
-    this.hide();
+    if (this.tooltipElement && this.tooltipElement.parentNode) {
+      this.tooltipElement.remove();
+    }
     
     // Create new tooltip
     this.tooltipElement = document.createElement("div");
@@ -283,7 +309,12 @@ export class TooltipManager {
     // Execute action
     if (this.formatHandlers[action]) {
       const selectedText = window.getSelection().toString().trim();
-      this.formatHandlers[action](selectedText);
+      try {
+        this.formatHandlers[action](selectedText);
+      } catch (error) {
+        console.error(`Error executing action ${action}:`, error);
+        showToast(`Error executing ${action}`, "error");
+      }
     }
     
     // Close dropdown if open
@@ -310,26 +341,46 @@ export class TooltipManager {
     const range = selection.getRangeAt(0);
     const activeElement = document.activeElement;
     
+    // Log the selected text and active element
+    console.log("Formatting text:", selectedText);
+    console.log("Active element:", activeElement);
+    console.log("Is editable:", this.isEditableElement(activeElement));
+    
     if (this.isEditableElement(activeElement)) {
       if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
-        const start = activeElement.selectionStart;
-        const end = activeElement.selectionEnd;
-        const text = activeElement.value;
-        
-        // Apply formatting
-        activeElement.value = text.slice(0, start) + marker + selectedText + marker + text.slice(end);
-        
-        // Position cursor after formatted text
-        activeElement.selectionStart = activeElement.selectionEnd = start + marker.length + selectedText.length + marker.length;
-        
-        // Trigger input event
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+        // For input and textarea elements
+        try {
+          const start = activeElement.selectionStart;
+          const end = activeElement.selectionEnd;
+          const text = activeElement.value;
+          
+          // Apply formatting
+          activeElement.value = text.slice(0, start) + marker + selectedText + marker + text.slice(end);
+          
+          // Position cursor after formatted text
+          activeElement.selectionStart = activeElement.selectionEnd = start + marker.length + selectedText.length + marker.length;
+          
+          // Trigger input event
+          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+          
+          console.log("Formatting applied to input/textarea");
+          return true;
+        } catch (error) {
+          console.error("Error applying formatting to input/textarea:", error);
+          return false;
+        }
       } else {
         // For contentEditable elements
         try {
-          document.execCommand("insertText", false, marker + selectedText + marker);
-        } catch (e) {
-          // Fallback for DOM manipulation
+          // Try using execCommand first
+          const success = document.execCommand("insertText", false, marker + selectedText + marker);
+          
+          if (success) {
+            console.log("Formatting applied with execCommand");
+            return true;
+          }
+          
+          // Fallback to DOM manipulation
           const newText = document.createTextNode(marker + selectedText + marker);
           range.deleteContents();
           range.insertNode(newText);
@@ -340,7 +391,41 @@ export class TooltipManager {
           newRange.selectNodeContents(newText);
           newRange.collapse(false);
           selection.addRange(newRange);
+          
+          console.log("Formatting applied with DOM manipulation");
+          return true;
+        } catch (e) {
+          console.error("Error applying formatting to contentEditable:", e);
+          
+          // Ultimate fallback: try to insert text directly
+          try {
+            const newText = document.createTextNode(marker + selectedText + marker);
+            range.deleteContents();
+            range.insertNode(newText);
+            console.log("Formatting applied with direct DOM insertion");
+            return true;
+          } catch (finalError) {
+            console.error("Final formatting error:", finalError);
+            return false;
+          }
         }
+      }
+    } else {
+      // Not in an editable element, try to copy to clipboard
+      try {
+        const formattedText = marker + selectedText + marker;
+        navigator.clipboard.writeText(formattedText)
+          .then(() => {
+            showToast("Formatted text copied to clipboard!", "success");
+          })
+          .catch((err) => {
+            showToast("Could not copy to clipboard.", "error");
+            console.error("Clipboard error:", err);
+          });
+        return true;
+      } catch (error) {
+        console.error("Error copying to clipboard:", error);
+        return false;
       }
     }
   }
@@ -363,24 +448,34 @@ export class TooltipManager {
     
     if (this.isEditableElement(activeElement)) {
       if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
-        const start = activeElement.selectionStart;
-        const end = activeElement.selectionEnd;
-        const text = activeElement.value;
-        
-        // Apply formatting
-        activeElement.value = text.slice(0, start) + formattedText + text.slice(end);
-        
-        // Position cursor after formatted text
-        activeElement.selectionStart = activeElement.selectionEnd = start + formattedText.length;
-        
-        // Trigger input event
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+        try {
+          const start = activeElement.selectionStart;
+          const end = activeElement.selectionEnd;
+          const text = activeElement.value;
+          
+          // Apply formatting
+          activeElement.value = text.slice(0, start) + formattedText + text.slice(end);
+          
+          // Position cursor after formatted text
+          activeElement.selectionStart = activeElement.selectionEnd = start + formattedText.length;
+          
+          // Trigger input event
+          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+          return true;
+        } catch (error) {
+          console.error("Error applying list formatting to input/textarea:", error);
+          return false;
+        }
       } else {
         // For contentEditable elements
         try {
-          document.execCommand("insertText", false, formattedText);
-        } catch (e) {
-          // Fallback for DOM manipulation
+          const success = document.execCommand("insertText", false, formattedText);
+          
+          if (success) {
+            return true;
+          }
+          
+          // Fallback to DOM manipulation
           const newText = document.createTextNode(formattedText);
           range.deleteContents();
           range.insertNode(newText);
@@ -391,7 +486,27 @@ export class TooltipManager {
           newRange.selectNodeContents(newText);
           newRange.collapse(false);
           selection.addRange(newRange);
+          
+          return true;
+        } catch (e) {
+          console.error("Error applying list formatting to contentEditable:", e);
+          return false;
         }
+      }
+    } else {
+      // Not in an editable element, try to copy to clipboard
+      try {
+        navigator.clipboard.writeText(formattedText)
+          .then(() => {
+            showToast("Formatted text copied to clipboard!", "success");
+          })
+          .catch((err) => {
+            showToast("Could not copy to clipboard.", "error");
+          });
+        return true;
+      } catch (error) {
+        console.error("Error copying list to clipboard:", error);
+        return false;
       }
     }
   }
@@ -419,20 +534,30 @@ export class TooltipManager {
     
     if (this.isEditableElement(activeElement)) {
       if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
-        const start = activeElement.selectionStart;
-        const end = activeElement.selectionEnd;
-        const text = activeElement.value;
-        
-        // Apply clean text
-        activeElement.value = text.slice(0, start) + cleanText + text.slice(end);
-        activeElement.selectionStart = activeElement.selectionEnd = start + cleanText.length;
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+        try {
+          const start = activeElement.selectionStart;
+          const end = activeElement.selectionEnd;
+          const text = activeElement.value;
+          
+          // Apply clean text
+          activeElement.value = text.slice(0, start) + cleanText + text.slice(end);
+          activeElement.selectionStart = activeElement.selectionEnd = start + cleanText.length;
+          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+          return true;
+        } catch (error) {
+          console.error("Error clearing formatting in input/textarea:", error);
+          return false;
+        }
       } else {
         // For contentEditable elements
         try {
-          document.execCommand("insertText", false, cleanText);
-        } catch (e) {
-          // Fallback for DOM manipulation
+          const success = document.execCommand("insertText", false, cleanText);
+          
+          if (success) {
+            return true;
+          }
+          
+          // Fallback to DOM manipulation
           const newText = document.createTextNode(cleanText);
           range.deleteContents();
           range.insertNode(newText);
@@ -443,7 +568,27 @@ export class TooltipManager {
           newRange.selectNodeContents(newText);
           newRange.collapse(false);
           selection.addRange(newRange);
+          
+          return true;
+        } catch (e) {
+          console.error("Error clearing formatting in contentEditable:", e);
+          return false;
         }
+      }
+    } else {
+      // Not in an editable element, try to copy to clipboard
+      try {
+        navigator.clipboard.writeText(cleanText)
+          .then(() => {
+            showToast("Clean text copied to clipboard!", "success");
+          })
+          .catch((err) => {
+            showToast("Could not copy to clipboard.", "error");
+          });
+        return true;
+      } catch (error) {
+        console.error("Error copying clean text to clipboard:", error);
+        return false;
       }
     }
   }

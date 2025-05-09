@@ -3,9 +3,6 @@
  * Background script for the SmartText extension
  */
 
-import { initializeStorage } from '../modules/storage.js';
-import { rewriteText } from '../modules/ai.js';
-
 // Map to keep track of which tabs have content scripts
 const activeTabs = new Map();
 
@@ -24,6 +21,122 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     chrome.tabs.create({ url: "welcome.html" });
   }
 });
+
+/**
+ * Initialize storage with default values
+ */
+async function initializeStorage() {
+  try {
+    // Check if already initialized
+    const isInitialized = await chrome.storage.local.get(['initialized']);
+    
+    if (!isInitialized.initialized) {
+      // Default profile
+      const DEFAULT_PROFILE = {
+        name: "Default Profile",
+        style: "Professional",
+        uxWriting: false,
+        cognitiveBias: false,
+        addEmojis: false,
+        autoRewrite: false,
+        biases: [],
+        customPrompt: ""
+      };
+      
+      // Predefined profiles
+      const PREDEFINED_PROFILES = {
+        'default': {
+          name: 'Default Profile',
+          style: 'Professional',
+          uxWriting: false,
+          cognitiveBias: false,
+          addEmojis: false,
+          autoRewrite: false,
+          biases: [],
+          customPrompt: ""
+        },
+        'professional': {
+          name: 'Professional',
+          style: 'Professional',
+          uxWriting: true,
+          cognitiveBias: false,
+          addEmojis: false,
+          autoRewrite: false,
+          biases: [],
+          customPrompt: "Keep communication clear, concise, and professional."
+        },
+        'marketing': {
+          name: 'Marketing',
+          style: 'Persuasive',
+          uxWriting: false,
+          cognitiveBias: true,
+          addEmojis: true,
+          autoRewrite: false,
+          biases: ["social-proof", "scarcity"],
+          customPrompt: "Create emotional impact and highlight clear benefits."
+        },
+        'technical': {
+          name: 'Technical',
+          style: 'Technical',
+          uxWriting: true,
+          cognitiveBias: false,
+          addEmojis: false,
+          autoRewrite: false,
+          biases: ["authority"],
+          customPrompt: "Prioritize technical accuracy and clarity."
+        },
+        'social': {
+          name: 'Social Media',
+          style: 'Casual',
+          uxWriting: false,
+          cognitiveBias: true,
+          addEmojis: true,
+          autoRewrite: false,
+          biases: ["social-proof"],
+          customPrompt: "Create engaging and shareable content."
+        }
+      };
+
+      // Default settings
+      const DEFAULT_SETTINGS = {
+        floatingMenu: true,
+        fixedButton: true,
+        keyboardShortcuts: true,
+        defaultProfile: "default",
+        maxTokens: 800,
+        temperature: 0.7,
+        apiKey: "9c834290886249ee86da40290caf6379",
+        apiUrl: "https://aoi-east-us.openai.azure.com/openai/deployments/mega-mind-gpt4o-mini/chat/completions?api-version=2024-02-15-preview",
+        model: "gpt-4o-mini"
+      };
+      
+      // Storage keys
+      const STORAGE_KEYS = {
+        PROFILES: "smarttext_profiles",
+        SELECTED_PROFILE: "smarttext_selected_profile",
+        SETTINGS: "smarttext_settings",
+        RECENT_EMOJIS: "smarttext_recent_emojis"
+      };
+      
+      // Initialize with predefined profiles
+      await chrome.storage.local.set({
+        initialized: true,
+        [STORAGE_KEYS.PROFILES]: PREDEFINED_PROFILES,
+        [STORAGE_KEYS.SELECTED_PROFILE]: PREDEFINED_PROFILES['default'],
+        [STORAGE_KEYS.SETTINGS]: DEFAULT_SETTINGS,
+        [STORAGE_KEYS.RECENT_EMOJIS]: ["👍", "❤️", "✅", "🎉", "👋", "🙏", "💯", "🔥"]
+      });
+      
+      console.log("✅ Storage initialized with default values");
+      return true;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Error initializing storage:", error);
+    return false;
+  }
+}
 
 /**
  * Create context menus for the extension
@@ -104,6 +217,111 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   activeTabs.delete(tabId);
 });
 
+// Create a simple AI rewrite function for text rewrites
+async function rewriteText(text, profile) {
+  try {
+    // Get settings for API key and URL
+    const settings = await chrome.storage.local.get('smarttext_settings');
+    
+    // API configuration - use settings or defaults
+    const API_CONFIG = {
+      apiKey: settings.smarttext_settings?.apiKey || "9c834290886249ee86da40290caf6379",
+      url: settings.smarttext_settings?.apiUrl || "https://aoi-east-us.openai.azure.com/openai/deployments/mega-mind-gpt4o-mini/chat/completions?api-version=2024-02-15-preview"
+    };
+    
+    // Style mappings
+    const styleMappings = {
+      'Professional': 'Use a formal and objective tone with precise language for corporate environments.',
+      'Casual': 'Use a friendly and conversational tone, as if talking to a friend.',
+      'Creative': 'Use imaginative and engaging language with metaphors and vivid descriptions.',
+      'Technical': 'Use clear and precise technical language with specific terminology.',
+      'Persuasive': 'Create persuasive and motivating text that positively influences the reader.'
+    };
+    
+    // Build system prompt
+    let systemPrompt = `You are a text rewriting expert who helps improve writing quality while maintaining the original meaning.`;
+    
+    // Add specific instructions based on profile settings
+    if (profile.uxWriting) {
+      systemPrompt += ` You apply UX writing principles: clarity, conciseness, and utility. You make text more scannable and user-friendly, using direct and actionable language.`;
+    }
+    
+    if (profile.cognitiveBias) {
+      systemPrompt += ` You understand psychological principles and cognitive biases, subtly incorporating techniques like social proof, scarcity, reciprocity, or authority to make the text more persuasive and engaging.`;
+    }
+    
+    if (profile.addEmojis) {
+      systemPrompt += ` You incorporate relevant emojis in a balanced way to improve emotional connection with the reader, without overusing them.`;
+    }
+    
+    // Use custom prompt if it exists
+    if (profile.customPrompt && profile.customPrompt.trim().length > 0) {
+      systemPrompt += ` ${profile.customPrompt.trim()}`;
+    }
+    
+    // Build user prompt
+    let userPrompt = `Rewrite the following text keeping the original meaning and intent, but improving its quality:
+
+Original Text:
+"${text}"
+
+Style Guidelines:
+- Writing Style: ${styleMappings[profile.style] || styleMappings['Professional']}
+${profile.uxWriting ? '- Optimize for clarity and user experience: make text scannable, concise, and action-oriented' : ''}
+${profile.cognitiveBias ? '- Apply subtle persuasive techniques to make it more engaging and convincing' : ''}
+${profile.addEmojis ? '- Add relevant emojis where appropriate to enhance the message' : ''}
+
+Preserve any key information, technical terms, or specific examples from the original. Your rewrite should be approximately the same length as the original unless brevity improves clarity.`;
+    
+    // Make API request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    const response = await fetch(API_CONFIG.url, {
+      method: "POST",
+      headers: {
+        "api-key": API_CONFIG.apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        max_tokens: 800,
+        temperature: 0.7
+      }),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      let errorMessage = `API Error: ${response.status}`;
+      try {
+        const errorBody = await response.text();
+        errorMessage += ` - ${errorBody}`;
+      } catch (e) {
+        // If we can't parse the error body, just use the status
+      }
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    
+    // Validate response
+    if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Invalid API response");
+    }
+    
+    return data.choices[0].message.content.trim();
+  } catch (error) {
+    console.error("AI error:", error);
+    // Return mock response if API fails
+    return `I tried to improve your text but encountered an API error. Please try again later. Error: ${error.message}`;
+  }
+}
+
 // Create a service for AI text rewriting
 const aiService = {
   rewriteText: async (text, profile) => {
@@ -133,6 +351,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         activeTabs.set(sender.tab.id, true);
       }
       sendResponse({ success: true });
+    },
+
+    "rewriteText": async () => {
+      try {
+        // This is called directly from popup.js
+        const rewrittenText = await rewriteText(request.text, request.profile);
+        sendResponse({ success: true, rewrittenText: rewrittenText });
+      } catch (error) {
+        console.error("AI rewrite error:", error);
+        sendResponse({ success: false, error: error.message });
+      }
     },
     
     "getAIModule": () => {
@@ -272,8 +501,10 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 // Service worker keep-alive for better reliability
-const keepAlive = () => setInterval(() => {
-  console.log("♥️ Background script heartbeat");
-}, 20000);
+function keepAlive() {
+  setInterval(() => {
+    console.log("♥️ Background script heartbeat");
+  }, 20000);
+}
 
 keepAlive();
