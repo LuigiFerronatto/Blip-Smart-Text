@@ -1,98 +1,98 @@
 /**
  * modules/ai.js
- * AI functionality for text rewriting
+ * Funcionalidade de IA para reescrita de texto
  */
 
 import { API_CONFIG } from './config.js';
 import { getSelectedProfile } from './storage.js';
 
 /**
- * Rewrite text using the OpenAI API based on the selected profile
- * @param {string} text - Text to rewrite
- * @param {Object} customProfile - (Optional) Custom profile to use
- * @returns {Promise<string>} - Rewritten text
+ * Reescreve texto usando a API OpenAI com base no perfil selecionado
+ * @param {string} text - Texto a ser reescrito
+ * @param {Object} customProfile - (Opcional) Perfil personalizado a ser usado
+ * @returns {Promise<string>} - Texto reescrito
  */
 export async function rewriteText(text, customProfile = null) {
   try {
-    // Get profile, with priority for custom profile or fallback to saved profile
+    // Obter o perfil, priorizando o perfil personalizado ou usando o perfil salvo
     const profile = customProfile || await getSelectedProfile();
     
-    // Build prompt based on profile
+    // Construir o prompt com base no perfil
     const promptData = buildPrompt(text, profile);
     
-    // Make API request
+    // Fazer a requisição para a API
     const response = await makeAPIRequest(promptData);
     
     return response;
   } catch (error) {
-    console.error("Detailed error in text rewriting:", {
+    console.error("Erro detalhado na reescrita de texto:", {
       message: error.message,
       stack: error.stack,
-      text: text?.substring(0, 100) // Log only first 100 chars for privacy
+      text: text?.substring(0, 100) // Logar apenas os primeiros 100 caracteres por privacidade
     });
 
-    // More detailed error messages
+    // Mensagens de erro mais detalhadas
     if (error.message.includes('fetch') || error.message.includes('network')) {
-      throw new Error("Connection error. Check your internet.");
+      throw new Error("Erro de conexão. Verifique sua internet.");
     }
     if (error.message.includes('API') || error.message.includes('key') || error.message.includes('401')) {
-      throw new Error("AI service issue. Check your API credentials.");
+      throw new Error("Problema com o serviço de IA. Verifique suas credenciais da API.");
     }
     
-    throw new Error("An error occurred while rewriting the text. Please try again.");
+    throw new Error("Ocorreu um erro ao reescrever o texto. Por favor, tente novamente.");
   }
 }
 
 /**
- * Build prompt for the API based on profile preferences
- * @param {string} text - Original text
- * @param {Object} profile - Configuration profile
- * @returns {Object} - Object containing systemPrompt and userPrompt
+ * Construir o prompt para a API com base nas preferências do perfil
+ * @param {string} text - Texto original
+ * @param {Object} profile - Perfil de configuração
+ * @returns {Object} - Objeto contendo systemPrompt e userPrompt
  */
 function buildPrompt(text, profile) {
-  // Style mappings
+  // Mapeamento de estilos
   const styleMappings = {
-    'Professional': 'Use a formal and objective tone with precise language for corporate environments.',
-    'Casual': 'Use a friendly and conversational tone, as if talking to a friend.',
-    'Creative': 'Use imaginative and engaging language with metaphors and vivid descriptions.',
-    'Technical': 'Use clear and precise technical language with specific terminology.',
-    'Persuasive': 'Create persuasive and motivating text that positively influences the reader.'
+    'Professional': 'Use um tom formal e objetivo com linguagem precisa para ambientes corporativos.',
+    'Casual': 'Use um tom amigável e conversacional, como se estivesse falando com um amigo.',
+    'Creative': 'Use uma linguagem imaginativa e envolvente com metáforas e descrições vívidas.',
+    'Technical': 'Use uma linguagem técnica clara e precisa com terminologia específica.',
+    'Persuasive': 'Crie um texto persuasivo e motivador que influencie positivamente o leitor.'
   };
 
-  // Build improved system prompt
-  let systemPrompt = `You are a text rewriting expert who helps improve writing quality while maintaining the original meaning.`;
+  // Construir o prompt do sistema aprimorado
+  let systemPrompt = `Você é um especialista em reescrita de texto que ajuda a melhorar a qualidade da escrita enquanto mantém o significado original.`;
   
-  // Add specific instructions based on profile settings
+  // Adicionar instruções específicas com base nas configurações do perfil
   if (profile.uxWriting) {
-    systemPrompt += ` You apply UX writing principles: clarity, conciseness, and utility. You make text more scannable and user-friendly, using direct and actionable language.`;
+    systemPrompt += ` Você aplica princípios de UX writing: clareza, concisão e utilidade. Você torna o texto mais escaneável e amigável ao usuário, usando linguagem direta e acionável.`;
   }
   
   if (profile.cognitiveBias) {
-    systemPrompt += ` You understand psychological principles and cognitive biases, subtly incorporating techniques like social proof, scarcity, reciprocity, or authority to make the text more persuasive and engaging.`;
+    systemPrompt += ` Você entende princípios psicológicos e vieses cognitivos, incorporando sutilmente técnicas como prova social, escassez, reciprocidade ou autoridade para tornar o texto mais persuasivo e envolvente.`;
   }
   
   if (profile.addEmojis) {
-    systemPrompt += ` You incorporate relevant emojis in a balanced way to improve emotional connection with the reader, without overusing them.`;
+    systemPrompt += ` Você incorpora emojis relevantes de forma equilibrada para melhorar a conexão emocional com o leitor, sem exagerar.`;
   }
   
-  // Use custom prompt if it exists
+  // Usar prompt personalizado, se existir
   if (profile.customPrompt && profile.customPrompt.trim().length > 0) {
     systemPrompt += ` ${profile.customPrompt.trim()}`;
   }
 
-  // Build user prompt
-  let userPrompt = `Rewrite the following text keeping the original meaning and intent, but improving its quality:
+  // Construir o prompt do usuário
+  let userPrompt = `Reescreva o texto a seguir mantendo o significado e a intenção originais, mas melhorando sua qualidade:
 
-Original Text:
+Texto Original:
 "${text}"
 
-Style Guidelines:
-- Writing Style: ${styleMappings[profile.style] || styleMappings['Professional']}
-${profile.uxWriting ? '- Optimize for clarity and user experience: make text scannable, concise, and action-oriented' : ''}
-${profile.cognitiveBias ? '- Apply subtle persuasive techniques to make it more engaging and convincing' : ''}
-${profile.addEmojis ? '- Add relevant emojis where appropriate to enhance the message' : ''}
+Diretrizes de Estilo:
+- Estilo de Escrita: ${styleMappings[profile.style] || styleMappings['Professional']}
+${profile.uxWriting ? '- Otimize para clareza e experiência do usuário: torne o texto escaneável, conciso e orientado para ação' : ''}
+${profile.cognitiveBias ? '- Aplique técnicas persuasivas sutis para torná-lo mais envolvente e convincente' : ''}
+${profile.addEmojis ? '- Adicione emojis relevantes onde apropriado para melhorar a mensagem' : ''}
 
-Preserve any key information, technical terms, or specific examples from the original. Your rewrite should be approximately the same length as the original unless brevity improves clarity.`;
+Preserve qualquer informação-chave, termos técnicos ou exemplos específicos do original. Sua reescrita deve ter aproximadamente o mesmo comprimento do original, a menos que a brevidade melhore a clareza.`;
 
   return {
     systemPrompt,
@@ -101,9 +101,9 @@ Preserve any key information, technical terms, or specific examples from the ori
 }
 
 /**
- * Make request to AI API
- * @param {Object} promptData - Object containing systemPrompt and userPrompt
- * @returns {Promise<string>} - Text returned by API
+ * Fazer a requisição para a API de IA
+ * @param {Object} promptData - Objeto contendo systemPrompt e userPrompt
+ * @returns {Promise<string>} - Texto retornado pela API
  */
 async function makeAPIRequest(promptData) {
   // Obter a configuração da API - usar os valores armazenados se disponíveis
@@ -126,17 +126,17 @@ async function makeAPIRequest(promptData) {
       }
     }
   } catch (error) {
-    console.warn("Could not retrieve stored API settings, using defaults:", error);
+    console.warn("Não foi possível recuperar as configurações da API armazenadas, usando os padrões:", error);
   }
   
   // Verificar se temos valores para prosseguir
   if (!apiKey || !url) {
-    throw new Error("Incomplete API configuration");
+    throw new Error("Configuração da API incompleta");
   }
   
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout de 30 segundos
     
     const response = await fetch(url, {
       method: "POST",
@@ -158,39 +158,39 @@ async function makeAPIRequest(promptData) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      let errorMessage = `API Error: ${response.status}`;
+      let errorMessage = `Erro na API: ${response.status}`;
       try {
         const errorBody = await response.text();
         errorMessage += ` - ${errorBody}`;
       } catch (e) {
-        // If we can't parse the error body, just use the status
+        // Se não conseguirmos analisar o corpo do erro, usar apenas o status
       }
       throw new Error(errorMessage);
     }
 
     const data = await response.json();
     
-    // Validate response
+    // Validar resposta
     if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("Invalid API response");
+      throw new Error("Resposta inválida da API");
     }
 
     return data.choices[0].message.content.trim();
   } catch (error) {
-    // Handle abort error specifically
+    // Tratar erro de timeout especificamente
     if (error.name === 'AbortError') {
-      throw new Error("API request timed out. Please try again.");
+      throw new Error("A requisição para a API expirou. Por favor, tente novamente.");
     }
     
-    console.error("API call error:", error);
-    throw error;  // Pass error up for higher-level handling
+    console.error("Erro na chamada da API:", error);
+    throw error;  // Passar o erro para tratamento em nível superior
   }
 }
 
-// Export a mock AI module for testing - útil quando a API não está disponível
+// Exportar um módulo de IA mock para testes - útil quando a API não está disponível
 export const mockAiModule = {
   rewriteText: async (text) => {
-    console.log("Using mock AI module");
-    return `[MOCK AI] Improved version: ${text}`;
+    console.log("Usando módulo de IA mock");
+    return `[MOCK IA] Versão melhorada: ${text}`;
   }
 };

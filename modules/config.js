@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS = {
   fixedButton: true,
   keyboardShortcuts: true,
   defaultProfile: "default",
-  maxTokens: 800,
+  maxTokens: 5800,
   temperature: 0.7,
   apiKey: "9c834290886249ee86da40290caf6379", // Mesma chave API padrão
   apiUrl: "https://aoi-east-us.openai.azure.com/openai/deployments/mega-mind-gpt4o-mini/chat/completions?api-version=2024-02-15-preview",
