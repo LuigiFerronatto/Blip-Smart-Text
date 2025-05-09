@@ -3,13 +3,69 @@
  * Manages the tooltip/floating menu for text selection
  */
 
-// Fallback toast function if UI module fails to load
-const fallbackToast = function(message, type = 'info', duration = 3000) {
+// Simplified showToast function if UI module cannot be imported
+const showToast = function(message, type = 'info', duration = 3000) {
   console.log(`[${type}] ${message}`);
+  
+  // Try to create a visual toast
+  try {
+    // Remove existing toasts
+    document.querySelectorAll('.smarttext-toast').forEach(toast => toast.remove());
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `smarttext-toast ${type}`;
+    
+    // Icons for each type
+    const icons = {
+      success: '✅',
+      error: '❌',
+      info: 'ℹ️'
+    };
+    
+    toast.innerHTML = `
+      <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
+      <div class="toast-message">${message}</div>
+    `;
+    
+    // Set position and style
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.backgroundColor = 'white';
+    toast.style.color = '#333';
+    toast.style.padding = '10px 15px';
+    toast.style.borderRadius = '4px';
+    toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    toast.style.zIndex = '2147483647';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    toast.style.gap = '8px';
+    toast.style.fontSize = '14px';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(20px)';
+    toast.style.transition = 'opacity 0.3s, transform 0.3s';
+    
+    // Add to document body
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Remove after duration
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(20px)';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  } catch (error) {
+    // Just log if we can't create a visual toast
+    console.error("Error creating toast:", error);
+  }
 };
-
-// Global reference to showToast function
-let showToast = fallbackToast;
 
 /**
  * Create and manage the tooltip that appears when text is selected
@@ -21,24 +77,11 @@ export class TooltipManager {
     this.activeRange = null;
     this.isVisible = false;
     this.formatHandlers = {};
+    this.editorElement = null; // Reference to the active editor element
     
-    // Try to load UI module for toast functionality
-    this.loadUIModule();
-  }
-  
-  /**
-   * Load UI module for toast functionality
-   */
-  async loadUIModule() {
-    try {
-      const uiModule = await import('./ui.js');
-      if (uiModule && uiModule.showToast) {
-        showToast = uiModule.showToast;
-      }
-    } catch (error) {
-      console.warn("Couldn't load UI module, using fallback toast:", error);
-      showToast = fallbackToast;
-    }
+    // Bind custom methods
+    this.handleSelection = this.handleSelection.bind(this);
+    this.handleFocus = this.handleFocus.bind(this);
   }
   
   /**
@@ -53,8 +96,149 @@ export class TooltipManager {
     // Listen for clicks outside to hide tooltip
     document.addEventListener('click', this.handleOutsideClick.bind(this));
     
+    // Listen for selection changes
+    document.addEventListener('selectionchange', this.handleSelection);
+    
+    // Listen for focus changes
+    document.addEventListener('focusin', this.handleFocus);
+    
+    // Add mutation observer to detect dynamic editor elements
+    this.setupMutationObserver();
+    
     console.log("✅ SmartText: Tooltip manager initialized");
     return true;
+  }
+  
+  /**
+   * Setup mutation observer to detect new editor elements
+   */
+  setupMutationObserver() {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList') {
+          // Check for new editable elements
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const editableElements = this.findEditableElements(node);
+              editableElements.forEach(el => {
+                // Set data attribute to mark as processed
+                if (!el.dataset.smarttextProcessed) {
+                  el.dataset.smarttextProcessed = 'true';
+                  console.log("Detected new editable element:", el);
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+    
+    // Start observing the whole document
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
+  
+  /**
+   * Find all editable elements within a container
+   */
+  findEditableElements(container) {
+    const results = [];
+    
+    // Direct editable elements
+    const selectors = [
+      'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([readonly])',
+      'textarea:not([readonly])',
+      '[contenteditable="true"]',
+      '[role="textbox"]',
+      '.editable',
+      '.ql-editor', // Quill
+      '.ProseMirror', // ProseMirror
+      '.mce-content-body', // TinyMCE
+      '.fr-element', // Froala
+      '.cke_editable', // CKEditor
+      '.blip-select__option', // Blip specific
+      '.blip-select input', // Blip specific
+      '.textarea-container', // Blip specific
+      '.textarea-container textarea', // Blip specific
+      '.text-input' // Blip specific
+    ];
+    
+    // Query for all editable elements
+    selectors.forEach(selector => {
+      try {
+        const elements = container.querySelectorAll(selector);
+        elements.forEach(el => results.push(el));
+      } catch (e) {
+        // Skip invalid selectors
+      }
+    });
+    
+    // Also check the container itself
+    if (this.isEditableElement(container)) {
+      results.push(container);
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Handle focus events to track active editor
+   */
+  handleFocus(event) {
+    const target = event.target;
+    
+    if (this.isEditableElement(target)) {
+      console.log("Focus on editable element:", target);
+      this.editorElement = target;
+    }
+  }
+  
+  /**
+   * Handle selection changes
+   */
+  handleSelection() {
+    const selection = window.getSelection();
+    
+    if (!selection.rangeCount) return;
+    
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString().trim();
+    
+    // Only show tooltip for non-empty selections and if enabled
+    if (selectedText && this.settings.floatingMenu) {
+      // Find containing editable element
+      const container = range.commonAncestorContainer;
+      let editableElement = null;
+      
+      if (container.nodeType === Node.ELEMENT_NODE) {
+        editableElement = this.isEditableElement(container) ? container : null;
+      } else if (container.nodeType === Node.TEXT_NODE && container.parentElement) {
+        editableElement = this.isEditableElement(container.parentElement) ? container.parentElement : null;
+      }
+      
+      // Search up the DOM tree
+      if (!editableElement) {
+        let element = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+        while (element && element !== document.body) {
+          if (this.isEditableElement(element)) {
+            editableElement = element;
+            break;
+          }
+          element = element.parentElement;
+        }
+      }
+      
+      // Update the current editor element
+      if (editableElement) {
+        this.editorElement = editableElement;
+        console.log("Selection in editable element:", editableElement);
+      }
+      
+      // Show the tooltip
+      this.show(range);
+    }
   }
   
   /**
@@ -62,9 +246,9 @@ export class TooltipManager {
    */
   registerFormatHandlers() {
     this.formatHandlers = {
-      "bold": (text) => this.formatText("**", text),
-      "italic": (text) => this.formatText("*", text),
-      "strike": (text) => this.formatText("~~", text),
+      "bold": (text) => this.formatText("*", text),
+      "italic": (text) => this.formatText("_", text),
+      "strike": (text) => this.formatText("~", text),
       "code": (text) => this.formatText("`", text),
       "list-ordered": (text) => this.formatList("1. ", text),
       "list-unordered": (text) => this.formatList("- ", text),
@@ -151,48 +335,70 @@ export class TooltipManager {
     this.tooltipElement.id = "smarttext-format-menu";
     this.tooltipElement.className = "smarttext-floating-menu";
     
+    // Apply styles directly to ensure it's not affected by page CSS
+    const tooltipStyles = {
+      position: 'absolute',
+      backgroundColor: '#FFFFFF',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      zIndex: '2147483647',
+      overflow: 'hidden',
+      padding: '8px',
+      transition: 'all 0.2s ease',
+      opacity: '0',
+      transform: 'translateY(10px)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      border: '1px solid #E0E0E0',
+      minWidth: '400px',
+      maxWidth: '400px'
+    };
+    
+    Object.assign(this.tooltipElement.style, tooltipStyles);
+    
     // HTML for the tooltip
     this.tooltipElement.innerHTML = `
-      <div class="menu-row primary-format">
-        <button class="menu-btn" data-action="bold" title="Bold (Ctrl+B)">
+      <div class="menu-row primary-format" style="display: flex; align-items: center; gap: 4px; padding: 2px;">
+        <button class="menu-btn" data-action="bold" title="Bold (Ctrl+B)" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <b>B</b>
         </button>
-        <button class="menu-btn" data-action="italic" title="Italic (Ctrl+I)">
+        <button class="menu-btn" data-action="italic" title="Italic (Ctrl+I)" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <i>I</i>
         </button>
-        <button class="menu-btn" data-action="strike" title="Strikethrough (Ctrl+E)">
+        <button class="menu-btn" data-action="strike" title="Strikethrough (Ctrl+E)" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <s>S</s>
         </button>
-        <button class="menu-btn" data-action="code" title="Code (Ctrl+K)">
+        <button class="menu-btn" data-action="code" title="Code (Ctrl+K)" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <code>{ }</code>
         </button>
-        <div class="menu-separator"></div>
-        <button class="menu-btn" data-action="list-ordered" title="Numbered List">
+        <div style="width: 1px; height: 20px; background-color: #E0E0E0; margin: 0 4px;"></div>
+        <button class="menu-btn" data-action="list-ordered" title="Numbered List" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <span class="icon">1.</span>
         </button>
-        <button class="menu-btn" data-action="list-unordered" title="Bullet List">
+        <button class="menu-btn" data-action="list-unordered" title="Bullet List" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <span class="icon">•</span>
         </button>
-        <button class="menu-btn" data-action="quote" title="Quote">
+        <button class="menu-btn" data-action="quote" title="Quote" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
           <span class="icon">&gt;</span>
         </button>
       </div>
-      <div class="menu-row secondary-actions">
-        <button class="menu-btn ai-btn" data-action="ai-rewrite" title="Rewrite with AI">
+      <div class="menu-row secondary-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; border-top: 1px solid #E0E0E0; padding-top: 8px;">
+        <button class="menu-btn ai-btn" data-action="ai-rewrite" title="Rewrite with AI" style="background: linear-gradient(135deg, #1968F0, #0C4EC0); color: white; padding: 6px 12px; border-radius: 16px; font-weight: 500; border: none; cursor: pointer;">
           <span class="icon">✨</span> <span class="btn-text">Rewrite with AI</span>
         </button>
-        <div class="dropdown-group">
-          <button class="menu-btn dropdown-btn" data-action="show-more" title="More options">
+        <div class="dropdown-group" style="position: relative;">
+          <button class="menu-btn dropdown-btn" data-action="show-more" title="More options" style="background: transparent; border: 1px solid transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; font-size: 14px; color: #292929; display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;">
             <span class="icon">⋮</span>
           </button>
-          <div class="dropdown-content">
-            <button class="dropdown-item" data-action="emoji" title="Insert Emoji">
+          <div class="dropdown-content" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #E0E0E0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); min-width: 180px; z-index: 2147483647; padding: 4px; margin-top: 4px;">
+            <button class="dropdown-item" data-action="emoji" title="Insert Emoji" style="display: flex; align-items: center; padding: 8px 12px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 4px; cursor: pointer; color: #292929; font-size: 14px; gap: 8px;">
               😀 Emojis
             </button>
-            <button class="dropdown-item" data-action="clear-format" title="Clear Formatting">
+            <button class="dropdown-item" data-action="clear-format" title="Clear Formatting" style="display: flex; align-items: center; padding: 8px 12px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 4px; cursor: pointer; color: #292929; font-size: 14px; gap: 8px;">
               Aa Clear Formatting
             </button>
-            <button class="dropdown-item" data-action="settings" title="Settings">
+            <button class="dropdown-item" data-action="settings" title="Settings" style="display: flex; align-items: center; padding: 8px 12px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 4px; cursor: pointer; color: #292929; font-size: 14px; gap: 8px;">
               ⚙️ Settings
             </button>
           </div>
@@ -200,7 +406,41 @@ export class TooltipManager {
       </div>
     `;
     
+    // Add styles for hover states
+    const style = document.createElement('style');
+    style.textContent = `
+      #smarttext-format-menu .menu-btn:hover {
+        background-color: rgba(25, 104, 240, 0.1) !important;
+        border-color: #C5D9FB !important;
+      }
+      
+      #smarttext-format-menu .menu-btn.active {
+        background-color: #C5D9FB !important;
+        transform: scale(0.95) !important;
+      }
+      
+      #smarttext-format-menu .ai-btn:hover {
+        background: linear-gradient(135deg, #0C4EC0, #072F73) !important;
+        box-shadow: 0 2px 4px rgba(9, 77, 192, 0.3) !important;
+      }
+      
+      #smarttext-format-menu .dropdown-content.show {
+        display: block !important;
+        animation: fadeIn 0.2s ease !important;
+      }
+      
+      #smarttext-format-menu .dropdown-item:hover {
+        background-color: rgba(25, 104, 240, 0.1) !important;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+    `;
+    
     // Add to page
+    document.head.appendChild(style);
     document.body.appendChild(this.tooltipElement);
     
     // Add event listeners
@@ -233,10 +473,8 @@ export class TooltipManager {
     }
     
     // Apply position
-    this.tooltipElement.style.position = "absolute";
     this.tooltipElement.style.top = `${top}px`;
     this.tooltipElement.style.left = `${left}px`;
-    this.tooltipElement.style.zIndex = "2147483647";
   }
   
   /**
@@ -258,7 +496,7 @@ export class TooltipManager {
       dropdownBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         const dropdownContent = this.tooltipElement.querySelector(".dropdown-content");
-        dropdownContent.classList.toggle("show");
+        dropdownContent.style.display = dropdownContent.style.display === 'block' ? 'none' : 'block';
       });
     }
     
@@ -272,9 +510,9 @@ export class TooltipManager {
       if (!this.tooltipElement) return;
       
       const dropdownContent = this.tooltipElement.querySelector(".dropdown-content");
-      if (dropdownContent && dropdownContent.classList.contains("show")) {
+      if (dropdownContent && dropdownContent.style.display === 'block') {
         if (!e.target.matches(".dropdown-btn") && !e.target.closest(".dropdown-content")) {
-          dropdownContent.classList.remove("show");
+          dropdownContent.style.display = 'none';
         }
       }
     });
@@ -308,8 +546,36 @@ export class TooltipManager {
     
     // Execute action
     if (this.formatHandlers[action]) {
-      const selectedText = window.getSelection().toString().trim();
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      
+      const selectedText = selection.toString().trim();
+      console.log(`Applying action "${action}" to text: "${selectedText}"`);
+      
       try {
+        // Always check if we have a valid editor element
+        if (!this.editorElement && action !== 'settings') {
+          // Try to find editor element from selection
+          const range = selection.getRangeAt(0);
+          const container = range.commonAncestorContainer;
+          let element = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+          
+          while (element && element !== document.body) {
+            if (this.isEditableElement(element)) {
+              this.editorElement = element;
+              break;
+            }
+            element = element.parentElement;
+          }
+          
+          if (!this.editorElement) {
+            console.warn("No editable element found for formatting");
+            showToast("Please select text within an editable area", "error");
+            return;
+          }
+        }
+        
+        // Execute the action
         this.formatHandlers[action](selectedText);
       } catch (error) {
         console.error(`Error executing action ${action}:`, error);
@@ -320,7 +586,7 @@ export class TooltipManager {
     // Close dropdown if open
     const dropdownContent = this.tooltipElement.querySelector(".dropdown-content");
     if (dropdownContent) {
-      dropdownContent.classList.remove("show");
+      dropdownContent.style.display = 'none';
     }
     
     // Hide tooltip for certain actions
@@ -331,102 +597,136 @@ export class TooltipManager {
   
   /**
    * Format selected text with markers
+   * @param {string} marker - The marker to add (e.g., "*", "_")
+   * @param {string} selectedText - The text to format
+   * @returns {boolean} - Whether the formatting was successful
    */
   formatText(marker, selectedText) {
-    if (!selectedText) return;
+    if (!selectedText) {
+      console.warn("No text selected for formatting");
+      return false;
+    }
     
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    console.log(`Formatting text with marker: "${marker}"`);
+    console.log(`Selected text: "${selectedText}"`);
+    console.log("Editor element:", this.editorElement);
     
-    const range = selection.getRangeAt(0);
-    const activeElement = document.activeElement;
-    
-    // Log the selected text and active element
-    console.log("Formatting text:", selectedText);
-    console.log("Active element:", activeElement);
-    console.log("Is editable:", this.isEditableElement(activeElement));
-    
-    if (this.isEditableElement(activeElement)) {
-      if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
-        // For input and textarea elements
+    // Special handling for Blip textarea
+    if (this.editorElement) {
+      // For Blip text areas
+      if (this.editorElement.classList.contains('textarea-container') || 
+          this.editorElement.closest('.textarea-container')) {
+        const textarea = this.editorElement.tagName === 'TEXTAREA' ? 
+                         this.editorElement : 
+                         this.editorElement.querySelector('textarea');
+        
+        if (textarea) {
+          try {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const fullText = textarea.value;
+            
+            console.log(`Selection range in textarea: ${start} to ${end}`);
+            
+            // Insert the marker at the beginning and end of selection
+            const newText = fullText.substring(0, start) + marker + selectedText + marker + fullText.substring(end);
+            
+            // Update the element's value
+            textarea.value = newText;
+            
+            // Update cursor position to end of formatted text
+            const newCursorPos = start + marker.length + selectedText.length + marker.length;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // Trigger input event to notify any listeners
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            console.log("Text formatting completed via direct value change in Blip textarea");
+            return true;
+          } catch (error) {
+            console.error("Error formatting text in Blip textarea:", error);
+          }
+        }
+      }
+      
+      // For regular input and textarea elements
+      if (this.editorElement.tagName === "INPUT" || this.editorElement.tagName === "TEXTAREA") {
         try {
-          const start = activeElement.selectionStart;
-          const end = activeElement.selectionEnd;
-          const text = activeElement.value;
+          const start = this.editorElement.selectionStart;
+          const end = this.editorElement.selectionEnd;
+          const fullText = this.editorElement.value;
           
-          // Apply formatting
-          activeElement.value = text.slice(0, start) + marker + selectedText + marker + text.slice(end);
+          console.log(`Selection range: ${start} to ${end}`);
           
-          // Position cursor after formatted text
-          activeElement.selectionStart = activeElement.selectionEnd = start + marker.length + selectedText.length + marker.length;
+          // Insert the marker at the beginning and end of selection
+          const newText = fullText.substring(0, start) + marker + selectedText + marker + fullText.substring(end);
           
-          // Trigger input event
-          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+          // Update the element's value
+          this.editorElement.value = newText;
           
-          console.log("Formatting applied to input/textarea");
+          // Update cursor position to end of formatted text
+          const newCursorPos = start + marker.length + selectedText.length + marker.length;
+          this.editorElement.setSelectionRange(newCursorPos, newCursorPos);
+          
+          // Trigger input event to notify any listeners
+          this.editorElement.dispatchEvent(new Event('input', { bubbles: true }));
+          
+          console.log("Text formatting completed via direct value change");
           return true;
         } catch (error) {
-          console.error("Error applying formatting to input/textarea:", error);
-          return false;
+          console.error("Error formatting text in input/textarea:", error);
         }
-      } else {
-        // For contentEditable elements
+      }
+      
+      // For contentEditable elements
+      if (this.editorElement.isContentEditable || 
+          this.editorElement.getAttribute('contenteditable') === 'true') {
         try {
-          // Try using execCommand first
-          const success = document.execCommand("insertText", false, marker + selectedText + marker);
-          
-          if (success) {
-            console.log("Formatting applied with execCommand");
-            return true;
-          }
-          
-          // Fallback to DOM manipulation
-          const newText = document.createTextNode(marker + selectedText + marker);
-          range.deleteContents();
-          range.insertNode(newText);
-          
-          // Reset selection
-          selection.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newText);
-          newRange.collapse(false);
-          selection.addRange(newRange);
-          
-          console.log("Formatting applied with DOM manipulation");
+          // Try the execCommand approach first
+          document.execCommand('insertText', false, marker + selectedText + marker);
+          console.log("Text formatting completed via execCommand");
           return true;
-        } catch (e) {
-          console.error("Error applying formatting to contentEditable:", e);
+        } catch (execErr) {
+          console.warn("execCommand failed:", execErr);
           
-          // Ultimate fallback: try to insert text directly
           try {
-            const newText = document.createTextNode(marker + selectedText + marker);
+            // Fallback to range manipulation
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            
+            // Create a new text node with the formatted text
+            const formattedNode = document.createTextNode(marker + selectedText + marker);
+            
+            // Delete the current selection content and insert the new node
             range.deleteContents();
-            range.insertNode(newText);
-            console.log("Formatting applied with direct DOM insertion");
+            range.insertNode(formattedNode);
+            
+            // Set selection after the newly inserted text
+            range.setStartAfter(formattedNode);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            console.log("Text formatting completed via range manipulation");
             return true;
-          } catch (finalError) {
-            console.error("Final formatting error:", finalError);
-            return false;
+          } catch (rangeErr) {
+            console.error("Range manipulation failed:", rangeErr);
           }
         }
       }
-    } else {
-      // Not in an editable element, try to copy to clipboard
-      try {
-        const formattedText = marker + selectedText + marker;
-        navigator.clipboard.writeText(formattedText)
-          .then(() => {
-            showToast("Formatted text copied to clipboard!", "success");
-          })
-          .catch((err) => {
-            showToast("Could not copy to clipboard.", "error");
-            console.error("Clipboard error:", err);
-          });
-        return true;
-      } catch (error) {
-        console.error("Error copying to clipboard:", error);
-        return false;
-      }
+    }
+    
+    // If we get here, all attempts failed - try clipboard as last resort
+    try {
+      const formattedText = marker + selectedText + marker;
+      navigator.clipboard.writeText(formattedText);
+      showToast("Formatted text copied to clipboard", "info");
+      console.log("Text formatting failed in editor, copied to clipboard instead");
+      return false;
+    } catch (clipboardErr) {
+      console.error("Clipboard operation failed:", clipboardErr);
+      showToast("Failed to format text", "error");
+      return false;
     }
   }
   
@@ -434,189 +734,282 @@ export class TooltipManager {
    * Format text as list or quote
    */
   formatList(prefix, selectedText) {
-    if (!selectedText) return;
-    
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-    
-    const range = selection.getRangeAt(0);
-    const activeElement = document.activeElement;
-    
-    // Format each line
-    const lines = selectedText.split('\n');
-    const formattedText = lines.map(line => `${prefix}${line}`).join('\n');
-    
-    if (this.isEditableElement(activeElement)) {
-      if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
+  if (!selectedText) return false;
+  
+  console.log(`Formatting as list with prefix: "${prefix}"`);
+  console.log(`Selected text: "${selectedText}"`);
+  
+  // Format each line with the prefix
+  const lines = selectedText.split('\n');
+  const formattedText = lines.map(line => `${prefix}${line}`).join('\n');
+  
+  // Special handling for Blip textarea
+  if (this.editorElement) {
+    // For Blip text areas
+    if (this.editorElement.classList.contains('textarea-container') || 
+        this.editorElement.closest('.textarea-container')) {
+      const textarea = this.editorElement.tagName === 'TEXTAREA' ? 
+                       this.editorElement : 
+                       this.editorElement.querySelector('textarea');
+      
+      if (textarea) {
         try {
-          const start = activeElement.selectionStart;
-          const end = activeElement.selectionEnd;
-          const text = activeElement.value;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const fullText = textarea.value;
           
-          // Apply formatting
-          activeElement.value = text.slice(0, start) + formattedText + text.slice(end);
+          // Insert the formatted text
+          const newText = fullText.substring(0, start) + formattedText + fullText.substring(end);
+          textarea.value = newText;
           
-          // Position cursor after formatted text
-          activeElement.selectionStart = activeElement.selectionEnd = start + formattedText.length;
+          // Update cursor position
+          const newCursorPos = start + formattedText.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
           
           // Trigger input event
-          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
           return true;
         } catch (error) {
-          console.error("Error applying list formatting to input/textarea:", error);
-          return false;
-        }
-      } else {
-        // For contentEditable elements
-        try {
-          const success = document.execCommand("insertText", false, formattedText);
-          
-          if (success) {
-            return true;
-          }
-          
-          // Fallback to DOM manipulation
-          const newText = document.createTextNode(formattedText);
-          range.deleteContents();
-          range.insertNode(newText);
-          
-          // Reset selection
-          selection.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newText);
-          newRange.collapse(false);
-          selection.addRange(newRange);
-          
-          return true;
-        } catch (e) {
-          console.error("Error applying list formatting to contentEditable:", e);
-          return false;
+          console.error("Error formatting list in Blip textarea:", error);
         }
       }
-    } else {
-      // Not in an editable element, try to copy to clipboard
+    }
+    
+    // Direct approach for INPUT and TEXTAREA
+    if (this.editorElement.tagName === "INPUT" || this.editorElement.tagName === "TEXTAREA") {
       try {
-        navigator.clipboard.writeText(formattedText)
-          .then(() => {
-            showToast("Formatted text copied to clipboard!", "success");
-          })
-          .catch((err) => {
-            showToast("Could not copy to clipboard.", "error");
-          });
+        const start = this.editorElement.selectionStart;
+        const end = this.editorElement.selectionEnd;
+        const fullText = this.editorElement.value;
+        
+        // Insert the formatted text
+        const newText = fullText.substring(0, start) + formattedText + fullText.substring(end);
+        this.editorElement.value = newText;
+        
+        // Update cursor position
+        const newCursorPos = start + formattedText.length;
+        this.editorElement.setSelectionRange(newCursorPos, newCursorPos);
+        
+        // Trigger input event
+        this.editorElement.dispatchEvent(new Event('input', { bubbles: true }));
         return true;
       } catch (error) {
-        console.error("Error copying list to clipboard:", error);
-        return false;
+        console.error("Error formatting list in input/textarea:", error);
+      }
+    }
+    
+    // For contentEditable elements
+    if (this.editorElement.isContentEditable || 
+        this.editorElement.getAttribute('contenteditable') === 'true') {
+      try {
+        // Try execCommand first
+        document.execCommand('insertText', false, formattedText);
+        return true;
+      } catch (execErr) {
+        console.warn("execCommand failed for list:", execErr);
+        
+        try {
+          // Fallback to range manipulation
+          const selection = window.getSelection();
+          const range = selection.getRangeAt(0);
+          const formattedNode = document.createTextNode(formattedText);
+          
+          range.deleteContents();
+          range.insertNode(formattedNode);
+          
+          // Set selection after inserted text
+          range.setStartAfter(formattedNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          return true;
+        } catch (rangeErr) {
+          console.error("Range manipulation failed for list:", rangeErr);
+        }
       }
     }
   }
   
-  /**
-   * Clear formatting from selected text
-   */
-  clearFormatting() {
-    const selectedText = window.getSelection().toString().trim();
-    if (!selectedText) return;
-    
-    // Remove formatting markers
-    const cleanText = selectedText
-      .replace(/\*\*?(.*?)\*\*?/g, '$1')  // Remove asterisks (bold)
-      .replace(/__(.*?)__/g, '$1')        // Remove double underscores
-      .replace(/_(.*?)_/g, '$1')          // Remove underscores (italic)
-      .replace(/~~(.*?)~~/g, '$1')        // Remove tildes (strikethrough)
-      .replace(/`(.*?)`/g, '$1');         // Remove backticks (code)
-    
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-    
-    const range = selection.getRangeAt(0);
-    const activeElement = document.activeElement;
-    
-    if (this.isEditableElement(activeElement)) {
-      if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA") {
+  // Clipboard fallback
+  try {
+    navigator.clipboard.writeText(formattedText);
+    showToast("Formatted list copied to clipboard", "info");
+    return false;
+  } catch (clipboardErr) {
+    console.error("Clipboard operation failed for list:", clipboardErr);
+    showToast("Failed to format list", "error");
+    return false;
+  }
+}
+
+/**
+ * Clear formatting from selected text
+ */
+clearFormatting() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return false;
+  
+  const selectedText = selection.toString().trim();
+  if (!selectedText) return false;
+  
+  // Remove various formatting markers
+  const cleanText = selectedText
+    .replace(/\*\*?(.*?)\*\*?/g, '$1')  // Remove asterisks (bold)
+    .replace(/__(.*?)__/g, '$1')        // Remove double underscores
+    .replace(/_(.*?)_/g, '$1')          // Remove underscores (italic)
+    .replace(/~~(.*?)~~/g, '$1')        // Remove tildes (strikethrough)
+    .replace(/`(.*?)`/g, '$1')          // Remove backticks (code)
+    .replace(/^[>#\-\d.]+\s*/gm, '');   // Remove list/quote markers
+  
+  // Special handling for Blip textarea
+  if (this.editorElement) {
+    // For Blip text areas
+    if (this.editorElement.classList.contains('textarea-container') || 
+        this.editorElement.closest('.textarea-container')) {
+      const textarea = this.editorElement.tagName === 'TEXTAREA' ? 
+                       this.editorElement : 
+                       this.editorElement.querySelector('textarea');
+      
+      if (textarea) {
         try {
-          const start = activeElement.selectionStart;
-          const end = activeElement.selectionEnd;
-          const text = activeElement.value;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const fullText = textarea.value;
           
-          // Apply clean text
-          activeElement.value = text.slice(0, start) + cleanText + text.slice(end);
-          activeElement.selectionStart = activeElement.selectionEnd = start + cleanText.length;
-          activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+          // Insert clean text
+          const newText = fullText.substring(0, start) + cleanText + fullText.substring(end);
+          textarea.value = newText;
+          
+          // Update cursor position
+          const newCursorPos = start + cleanText.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+          
+          // Trigger input event
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
           return true;
         } catch (error) {
-          console.error("Error clearing formatting in input/textarea:", error);
-          return false;
-        }
-      } else {
-        // For contentEditable elements
-        try {
-          const success = document.execCommand("insertText", false, cleanText);
-          
-          if (success) {
-            return true;
-          }
-          
-          // Fallback to DOM manipulation
-          const newText = document.createTextNode(cleanText);
-          range.deleteContents();
-          range.insertNode(newText);
-          
-          // Reset selection
-          selection.removeAllRanges();
-          const newRange = document.createRange();
-          newRange.selectNodeContents(newText);
-          newRange.collapse(false);
-          selection.addRange(newRange);
-          
-          return true;
-        } catch (e) {
-          console.error("Error clearing formatting in contentEditable:", e);
-          return false;
+          console.error("Error clearing formatting in Blip textarea:", error);
         }
       }
-    } else {
-      // Not in an editable element, try to copy to clipboard
+    }
+    
+    // Direct approach for INPUT and TEXTAREA
+    if (this.editorElement.tagName === "INPUT" || this.editorElement.tagName === "TEXTAREA") {
       try {
-        navigator.clipboard.writeText(cleanText)
-          .then(() => {
-            showToast("Clean text copied to clipboard!", "success");
-          })
-          .catch((err) => {
-            showToast("Could not copy to clipboard.", "error");
-          });
+        const start = this.editorElement.selectionStart;
+        const end = this.editorElement.selectionEnd;
+        const fullText = this.editorElement.value;
+        
+        // Insert clean text
+        const newText = fullText.substring(0, start) + cleanText + fullText.substring(end);
+        this.editorElement.value = newText;
+        
+        // Update cursor position
+        const newCursorPos = start + cleanText.length;
+        this.editorElement.setSelectionRange(newCursorPos, newCursorPos);
+        
+        // Trigger input event
+        this.editorElement.dispatchEvent(new Event('input', { bubbles: true }));
         return true;
       } catch (error) {
-        console.error("Error copying clean text to clipboard:", error);
-        return false;
+        console.error("Error clearing formatting in input/textarea:", error);
+      }
+    }
+    
+    // For contentEditable elements
+    if (this.editorElement.isContentEditable || 
+        this.editorElement.getAttribute('contenteditable') === 'true') {
+      try {
+        // Try execCommand first
+        document.execCommand('insertText', false, cleanText);
+        return true;
+      } catch (execErr) {
+        console.warn("execCommand failed for clearing format:", execErr);
+        
+        try {
+          // Fallback to range manipulation
+          const range = selection.getRangeAt(0);
+          const cleanNode = document.createTextNode(cleanText);
+          
+          range.deleteContents();
+          range.insertNode(cleanNode);
+          
+          // Set selection after inserted text
+          range.setStartAfter(cleanNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          return true;
+        } catch (rangeErr) {
+          console.error("Range manipulation failed for clearing format:", rangeErr);
+        }
       }
     }
   }
   
-  /**
-   * Update settings
-   */
-  updateSettings(newSettings) {
-    this.settings = { ...this.settings, ...newSettings };
-    
-    // Hide tooltip if floating menu is disabled
-    if (!this.settings.floatingMenu) {
-      this.hide();
-    }
+  // Clipboard fallback
+  try {
+    navigator.clipboard.writeText(cleanText);
+    showToast("Clean text copied to clipboard", "info");
+    return false;
+  } catch (clipboardErr) {
+    console.error("Clipboard operation failed for clearing format:", clipboardErr);
+    showToast("Failed to clear formatting", "error");
+    return false;
+  }
+}
+  
+/**
+ * Update settings
+ */
+updateSettings(newSettings) {
+  this.settings = { ...this.settings, ...newSettings };
+  
+  // Hide tooltip if floating menu is disabled
+  if (!this.settings.floatingMenu) {
+    this.hide();
+  }
+}
+
+/**
+ * Check if an element is editable
+ */
+isEditableElement(element) {
+  if (!element) return false;
+  
+  // Standard input elements
+  if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+    return !element.disabled && !element.readOnly;
   }
   
-  /**
-   * Check if an element is editable
-   */
-  isEditableElement(element) {
-    return element && (
-      element.tagName === 'INPUT' || 
-      element.tagName === 'TEXTAREA' || 
-      element.isContentEditable ||
-      element.classList.contains('editable') ||
-      element.getAttribute('role') === 'textbox'
-    );
-  }
+  // Content editable elements
+  if (element.isContentEditable || element.getAttribute('contenteditable') === 'true') return true;
+  
+  // Common classes and attributes
+  if (element.getAttribute('role') === 'textbox') return true;
+  if (element.classList.contains('editable')) return true;
+  
+  // Check for common rich text editors
+  if (element.classList.contains('ql-editor')) return true; // Quill
+  if (element.classList.contains('ProseMirror')) return true; // ProseMirror
+  if (element.classList.contains('mce-content-body')) return true; // TinyMCE
+  if (element.classList.contains('fr-element')) return true; // Froala
+  if (element.classList.contains('cke_editable')) return true; // CKEditor
+  
+  // Blip-specific elements
+  if (element.classList.contains('text-input') || 
+      element.classList.contains('textarea-container') ||
+      element.classList.contains('blip-select__option') ||
+      element.querySelector('.textarea-container') ||
+      element.querySelector('textarea')) return true;
+  
+  // Check for editable parent (for nested editors)
+  if (element.closest('[contenteditable="true"]') || 
+      element.closest('.textarea-container') ||
+      element.closest('.text-input')) return true;
+  
+  return false;
+}
 }
 
 // Helper functions for external use

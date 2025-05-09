@@ -28,6 +28,7 @@ async function init() {
     setupAIWriting();
     setupProfiles();
     setupSettings();
+    setupKeyboardShortcuts();
     checkExtensionStatus();
     
     // Adjust textarea heights
@@ -289,6 +290,166 @@ function setupProfiles() {
   if (profileList.value) {
     loadProfileDetails(profileList.value);
   }
+}
+
+/**
+ * Set up keyboard shortcuts tab
+ */
+function setupKeyboardShortcuts() {
+  // Get all editable shortcut keys
+  const shortcutKeys = document.querySelectorAll('.shortcut-keys:not(.static)');
+  
+  // Skip if not on keyboard shortcuts screen
+  if (!shortcutKeys.length) return;
+  
+  // Load saved shortcuts
+  chrome.storage.local.get(null, (data) => {
+    for (const key in data) {
+      if (key.startsWith('smarttext_shortcut_')) {
+        const command = key.replace('smarttext_shortcut_', '');
+        const element = document.querySelector(`.shortcut-keys[data-command="${command}"]`);
+        if (element) {
+          element.textContent = data[key];
+        }
+      }
+    }
+  });
+  
+  // Add click event to each shortcut
+  shortcutKeys.forEach(shortcutKey => {
+    shortcutKey.addEventListener('click', () => {
+      // Get command and current shortcut
+      const command = shortcutKey.dataset.command;
+      const currentShortcut = shortcutKey.textContent;
+      
+      // Create and show shortcut editing modal
+      createShortcutModal(command, currentShortcut, shortcutKey);
+    });
+  });
+}
+
+/**
+ * Create and show shortcut editing modal
+ */
+function createShortcutModal(command, currentShortcut, shortcutElement) {
+  // Remove existing modal if any
+  const existingModal = document.getElementById('shortcut-edit-modal');
+  if (existingModal) existingModal.remove();
+  
+  // Create modal
+  const modal = document.createElement('div');
+  modal.id = 'shortcut-edit-modal';
+  modal.className = 'shortcut-edit-modal';
+  
+  modal.innerHTML = `
+    <div class="shortcut-edit-content">
+      <div class="shortcut-edit-header">
+        <h3>Edit Keyboard Shortcut</h3>
+      </div>
+      <p>Press the keys you want to use for this shortcut:</p>
+      <div id="shortcut-recorder" class="shortcut-recorder" tabindex="0">${currentShortcut}</div>
+      <p class="shortcut-hint">Press Escape to cancel, Backspace to clear</p>
+      <div class="shortcut-edit-footer">
+        <button id="cancel-shortcut" class="btn btn-secondary">Cancel</button>
+        <button id="save-shortcut" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  `;
+  
+  // Add to page
+  document.body.appendChild(modal);
+  
+  // Show modal with animation
+  setTimeout(() => modal.classList.add('show'), 10);
+  
+  // Set up recorder
+  const recorder = document.getElementById('shortcut-recorder');
+  recorder.focus();
+  
+  // Key recording function
+  const recordKey = (e) => {
+    e.preventDefault();
+    
+    // Handle special keys
+    if (e.key === 'Escape') {
+      // Cancel
+      recorder.removeEventListener('keydown', recordKey);
+      modal.classList.remove('show');
+      setTimeout(() => modal.remove(), 300);
+      return;
+    }
+    
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      // Clear
+      recorder.textContent = 'Not set';
+      return;
+    }
+    
+    // Build shortcut string
+    const parts = [];
+    if (e.ctrlKey) parts.push('Ctrl');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    if (e.metaKey) parts.push('Command');
+    
+    // Add key if it's not a modifier
+    if (!/^(Control|Alt|Shift|Meta)$/.test(e.key)) {
+      let key = e.key;
+      
+      // Format key
+      if (key === ' ') key = 'Space';
+      if (key === '+') key = 'Plus';
+      if (key.length === 1) key = key.toUpperCase();
+      
+      parts.push(key);
+    }
+    
+    // Only update if we have at least a modifier and a key
+    if (parts.length >= 2) {
+      recorder.textContent = parts.join('+');
+    }
+  };
+  
+  // Add listeners
+  recorder.addEventListener('keydown', recordKey);
+  
+  // Cancel button
+  document.getElementById('cancel-shortcut').addEventListener('click', () => {
+    recorder.removeEventListener('keydown', recordKey);
+    modal.classList.remove('show');
+    setTimeout(() => modal.remove(), 300);
+  });
+  
+  // Save button
+  document.getElementById('save-shortcut').addEventListener('click', () => {
+    // Update shortcut element
+    shortcutElement.textContent = recorder.textContent;
+    
+    // Remove event listener
+    recorder.removeEventListener('keydown', recordKey);
+    
+    // Close modal
+    modal.classList.remove('show');
+    setTimeout(() => modal.remove(), 300);
+    
+    // Show toast
+    showToast("Shortcut updated! Restart browser to apply.", "success");
+    
+    // Save to extension commands (note: this will only show the suggested shortcut)
+    // Actual changing requires the user to go to chrome://extensions/shortcuts
+    chrome.storage.local.set({
+      ['smarttext_shortcut_' + command]: recorder.textContent
+    });
+  });
+  
+  // Close when clicking outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      recorder.removeEventListener('keydown', recordKey);
+      modal.classList.remove('show');
+      setTimeout(() => modal.remove(), 300);
+    }
+  });
 }
 
 /**

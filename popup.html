@@ -1,300 +1,516 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SmartText Extension</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/popup.css">
-</head>
-<body>
-  <div class="popup-container">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="logo">
-        <img src="assets/icons/icon48.png" alt="SmartText Logo">
-        <h1>SmartText</h1>
-      </div>
-      <div class="nav-menu">
-        <button class="nav-item active" data-screen="home">
-          <span class="icon">🏠</span>
-          <span>Home</span>
-        </button>
-        <button class="nav-item" data-screen="ai-writing">
-          <span class="icon">✨</span>
-          <span>AI Writing</span>
-        </button>
-        <button class="nav-item" data-screen="profiles">
-          <span class="icon">👤</span>
-          <span>Profiles</span>
-        </button>
-        <button class="nav-item" data-screen="settings">
-          <span class="icon">⚙️</span>
-          <span>Settings</span>
-        </button>
-      </div>
-      <div class="sidebar-footer">
-        v1.1.0
-      </div>
-    </div>
-
-    <!-- Content Area -->
-    <div class="content-area">
-      <!-- Home Screen -->
-      <div id="home-screen" class="screen active">
-        <header>
-          <h2>Welcome to SmartText</h2>
-          <p>Select text on any webpage to start improving your writing.</p>
-        </header>
-
-        <div class="status-section">
-          <div class="status-item">
-            <span class="status-label">Extension:</span>
-            <span id="extension-status" class="status-value">Checking...</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Current Profile:</span>
-            <span id="current-profile" class="status-value">Default</span>
-          </div>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartText Extension</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/popup.css">
+    <style>
+      /* Keyboard shortcuts styles */
+      .shortcuts-container {
+        padding: 10px 0;
+      }
+      
+      .shortcut-list {
+        margin-bottom: 20px;
+      }
+      
+      .shortcut-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        transition: background-color 0.2s;
+      }
+      
+      .shortcut-item:hover {
+        background-color: rgba(25, 104, 240, 0.05);
+      }
+      
+      .shortcut-info {
+        flex: 1;
+      }
+      
+      .shortcut-name {
+        font-weight: 500;
+        font-size: var(--font-size-sm);
+      }
+      
+      .shortcut-description {
+        font-size: var(--font-size-xs);
+        color: var(--text-light);
+        margin-top: 2px;
+      }
+      
+      .shortcut-keys {
+        background-color: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: var(--font-size-xs);
+        font-family: monospace;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .shortcut-keys:hover {
+        background-color: var(--primary-lighter);
+        border-color: var(--primary-light);
+      }
+      
+      .shortcut-keys.static {
+        cursor: default;
+      }
+      
+      .shortcut-keys.static:hover {
+        background-color: #f5f5f5;
+        border-color: var(--border);
+      }
+      
+      .shortcuts-note {
+        background-color: var(--primary-lighter);
+        padding: 12px;
+        border-radius: var(--radius-md);
+        margin-top: 20px;
+        font-size: var(--font-size-xs);
+      }
+      
+      .shortcuts-note p {
+        margin-bottom: 6px;
+      }
+      
+      .shortcuts-container h3 {
+        font-size: var(--font-size-md);
+        font-weight: 500;
+        color: var(--primary);
+        margin: 20px 0 10px;
+      }
+      
+      /* Shortcut edit modal */
+      .shortcut-edit-modal {
+        background-color: rgba(0, 0, 0, 0.5);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s;
+      }
+      
+      .shortcut-edit-modal.show {
+        opacity: 1;
+        visibility: visible;
+      }
+      
+      .shortcut-edit-content {
+        background-color: white;
+        border-radius: 8px;
+        padding: 16px;
+        width: 90%;
+        max-width: 300px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      }
+      
+      .shortcut-recorder {
+        border: 2px solid var(--primary);
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        margin: 16px 0;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: monospace;
+        font-size: var(--font-size-md);
+        background-color: var(--primary-lighter);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="popup-container">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="logo">
+          <img src="assets/icons/icon48.png" alt="SmartText Logo">
+          <h1>SmartText</h1>
         </div>
-
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-icon format-icon">F</div>
-            <h3>Text Formatting</h3>
-            <p>Quick markdown formatting for selected text.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon ai-icon">AI</div>
-            <h3>AI Rewriting</h3>
-            <p>Rewrite text with AI to improve quality.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon emoji-icon">😀</div>
-            <h3>Emoji Picker</h3>
-            <p>Insert emojis into any editable field.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon profile-icon">P</div>
-            <h3>Writing Profiles</h3>
-            <p>Custom profiles for different writing styles.</p>
-          </div>
-        </div>
-
-        <div class="quick-actions">
-          <button id="ai-writing-btn" class="btn btn-primary">
-            <span class="icon">✨</span> AI Writing
+        <div class="nav-menu">
+          <button class="nav-item active" data-screen="home">
+            <span class="icon">🏠</span>
+            <span>Home</span>
           </button>
-          <button id="config-btn" class="btn btn-secondary">
-            <span class="icon">⚙️</span> Settings
+          <button class="nav-item" data-screen="ai-writing">
+            <span class="icon">✨</span>
+            <span>AI Writing</span>
+          </button>
+          <button class="nav-item" data-screen="profiles">
+            <span class="icon">👤</span>
+            <span>Profiles</span>
+          </button>
+          <button class="nav-item" data-screen="keyboard">
+            <span class="icon">⌨️</span>
+            <span>Shortcuts</span>
+          </button>
+          <button class="nav-item" data-screen="settings">
+            <span class="icon">⚙️</span>
+            <span>Settings</span>
           </button>
         </div>
+        <div class="sidebar-footer">
+          v1.1.0
+        </div>
       </div>
-
-      <!-- AI Writing Screen -->
-      <div id="ai-writing-screen" class="screen">
-        <header>
-          <h2>AI Writing Assistant</h2>
-          <p>Rewrite text to improve clarity, style, and impact.</p>
-        </header>
-
-        <div class="ai-writing-container">
-          <div class="input-group">
-            <label for="ai-input">Original Text</label>
-            <textarea id="ai-input" class="form-control" placeholder="Paste or type text here..."></textarea>
-          </div>
-
-          <div class="ai-controls">
-            <div class="select-group">
-              <label for="writing-style">Style</label>
-              <select id="writing-style" class="form-control">
-                <option value="Professional">Professional</option>
-                <option value="Casual">Casual</option>
-                <option value="Creative">Creative</option>
-                <option value="Technical">Technical</option>
-                <option value="Persuasive">Persuasive</option>
-              </select>
+  
+      <!-- Content Area -->
+      <div class="content-area">
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active">
+          <header>
+            <h2>Welcome to SmartText</h2>
+            <p>Select text on any webpage to start improving your writing.</p>
+          </header>
+  
+          <div class="status-section">
+            <div class="status-item">
+              <span class="status-label">Extension:</span>
+              <span id="extension-status" class="status-value">Checking...</span>
             </div>
-
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" id="ux-optimization">
-                UX Writing
-              </label>
-              <label>
-                <input type="checkbox" id="cognitive-bias">
-                Persuasive Techniques
-              </label>
-              <label>
-                <input type="checkbox" id="add-emojis">
-                Add Emojis
-              </label>
+            <div class="status-item">
+              <span class="status-label">Current Profile:</span>
+              <span id="current-profile" class="status-value">Default</span>
             </div>
           </div>
-
-          <button id="rewrite-btn" class="btn btn-primary">
-            🔄 Rewrite with AI
-          </button>
-
-          <div class="input-group">
-            <label for="ai-output">Rewritten Text</label>
-            <textarea id="ai-output" class="form-control" placeholder="Rewritten text will appear here..." readonly></textarea>
+  
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="feature-icon format-icon">F</div>
+              <h3>Text Formatting</h3>
+              <p>Quick markdown formatting for selected text.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ai-icon">AI</div>
+              <h3>AI Rewriting</h3>
+              <p>Rewrite text with AI to improve quality.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon emoji-icon">😀</div>
+              <h3>Emoji Picker</h3>
+              <p>Insert emojis into any editable field.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon profile-icon">P</div>
+              <h3>Writing Profiles</h3>
+              <p>Custom profiles for different writing styles.</p>
+            </div>
           </div>
-
-          <div class="output-actions">
-            <button id="copy-output" class="btn btn-secondary">
-              📋 Copy
+  
+          <div class="quick-actions">
+            <button id="ai-writing-btn" class="btn btn-primary">
+              <span class="icon">✨</span> AI Writing
             </button>
-            <button id="save-output" class="btn btn-secondary">
-              💾 Save as File
+            <button id="config-btn" class="btn btn-secondary">
+              <span class="icon">⚙️</span> Settings
             </button>
           </div>
         </div>
-      </div>
-
-      <!-- Profiles Screen -->
-      <div id="profiles-screen" class="screen">
-        <header>
-          <h2>Writing Profiles</h2>
-          <p>Customize and manage your writing profiles.</p>
-        </header>
-
-        <div class="profiles-container">
-          <div class="profile-selector">
-            <select id="profile-list" class="form-control">
-              <!-- Profiles will be loaded dynamically -->
-            </select>
-            <div class="profile-actions">
-              <button id="new-profile-btn" class="btn-icon" title="New Profile">+</button>
-              <button id="delete-profile-btn" class="btn-icon" title="Delete Profile">🗑️</button>
-            </div>
-          </div>
-
-          <div class="profile-details">
+  
+        <!-- AI Writing Screen -->
+        <div id="ai-writing-screen" class="screen">
+          <header>
+            <h2>AI Writing Assistant</h2>
+            <p>Rewrite text to improve clarity, style, and impact.</p>
+          </header>
+  
+          <div class="ai-writing-container">
             <div class="input-group">
-              <label for="profile-name">Profile Name</label>
-              <input type="text" id="profile-name" class="form-control" placeholder="Profile name">
+              <label for="ai-input">Original Text</label>
+              <textarea id="ai-input" class="form-control" placeholder="Paste or type text here..."></textarea>
             </div>
-
-            <div class="input-group">
-              <label for="profile-style">Writing Style</label>
-              <select id="profile-style" class="form-control">
-                <option value="Professional">Professional</option>
-                <option value="Casual">Casual</option>
-                <option value="Creative">Creative</option>
-                <option value="Technical">Technical</option>
-                <option value="Persuasive">Persuasive</option>
-              </select>
-            </div>
-
-            <div class="checkbox-group">
-              <label>
-                <input type="checkbox" id="profile-ux">
-                Apply UX Writing Principles
-              </label>
-              <label>
-                <input type="checkbox" id="profile-bias">
-                Use Cognitive Biases
-              </label>
-              <label>
-                <input type="checkbox" id="profile-emoji">
-                Include Relevant Emojis
-              </label>
-              <label>
-                <input type="checkbox" id="profile-auto">
-                Auto-Rewrite on Selection
-              </label>
-            </div>
-
-            <button id="save-profile-btn" class="btn btn-primary">
-              💾 Save Profile
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings Screen -->
-      <div id="settings-screen" class="screen">
-        <header>
-          <h2>Settings</h2>
-          <p>Configure your SmartText extension preferences.</p>
-        </header>
-
-        <div class="settings-container">
-          <div class="settings-group">
-            <h3>Display Settings</h3>
-            <div class="toggle-group">
-              <label class="toggle-label">
-                <span>Show Floating Menu</span>
-                <label class="switch">
-                  <input type="checkbox" id="floating-menu-toggle" checked>
-                  <span class="slider round"></span>
+  
+            <div class="ai-controls">
+              <div class="select-group">
+                <label for="writing-style">Style</label>
+                <select id="writing-style" class="form-control">
+                  <option value="Professional">Professional</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Creative">Creative</option>
+                  <option value="Technical">Technical</option>
+                  <option value="Persuasive">Persuasive</option>
+                </select>
+              </div>
+  
+              <div class="checkbox-group">
+                <label>
+                  <input type="checkbox" id="ux-optimization">
+                  UX Writing
                 </label>
-              </label>
-              <label class="toggle-label">
-                <span>Show Fixed Button</span>
-                <label class="switch">
-                  <input type="checkbox" id="fixed-button-toggle" checked>
-                  <span class="slider round"></span>
+                <label>
+                  <input type="checkbox" id="cognitive-bias">
+                  Persuasive Techniques
                 </label>
-              </label>
-              <label class="toggle-label">
-                <span>Enable Keyboard Shortcuts</span>
-                <label class="switch">
-                  <input type="checkbox" id="keyboard-shortcuts-toggle" checked>
-                  <span class="slider round"></span>
+                <label>
+                  <input type="checkbox" id="add-emojis">
+                  Add Emojis
                 </label>
-              </label>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h3>API Settings</h3>
-            <div class="input-group">
-              <label for="api-key">API Key</label>
-              <div class="api-key-input">
-                <input type="password" id="api-key" class="form-control" placeholder="Enter your API key">
-                <button id="toggle-api-key" class="icon-button">👁️</button>
               </div>
             </div>
+  
+            <button id="rewrite-btn" class="btn btn-primary">
+              🔄 Rewrite with AI
+            </button>
+  
             <div class="input-group">
-              <label for="api-url">API URL</label>
-              <input type="text" id="api-url" class="form-control" placeholder="Enter API endpoint URL">
+              <label for="ai-output">Rewritten Text</label>
+              <textarea id="ai-output" class="form-control" placeholder="Rewritten text will appear here..." readonly></textarea>
             </div>
-            <div class="input-group">
-              <label for="model-select">Model</label>
-              <select id="model-select" class="form-control">
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              </select>
+  
+            <div class="output-actions">
+              <button id="copy-output" class="btn btn-secondary">
+                📋 Copy
+              </button>
+              <button id="save-output" class="btn btn-secondary">
+                💾 Save as File
+              </button>
             </div>
           </div>
-
-          <div class="settings-group">
-            <h3>Default Profile</h3>
-            <div class="input-group">
-              <label for="default-profile">Select Default Profile</label>
-              <select id="default-profile" class="form-control">
+        </div>
+  
+        <!-- Profiles Screen -->
+        <div id="profiles-screen" class="screen">
+          <header>
+            <h2>Writing Profiles</h2>
+            <p>Customize and manage your writing profiles.</p>
+          </header>
+  
+          <div class="profiles-container">
+            <div class="profile-selector">
+              <select id="profile-list" class="form-control">
                 <!-- Profiles will be loaded dynamically -->
               </select>
+              <div class="profile-actions">
+                <button id="new-profile-btn" class="btn-icon" title="New Profile">+</button>
+                <button id="delete-profile-btn" class="btn-icon" title="Delete Profile">🗑️</button>
+              </div>
+            </div>
+  
+            <div class="profile-details">
+              <div class="input-group">
+                <label for="profile-name">Profile Name</label>
+                <input type="text" id="profile-name" class="form-control" placeholder="Profile name">
+              </div>
+  
+              <div class="input-group">
+                <label for="profile-style">Writing Style</label>
+                <select id="profile-style" class="form-control">
+                  <option value="Professional">Professional</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Creative">Creative</option>
+                  <option value="Technical">Technical</option>
+                  <option value="Persuasive">Persuasive</option>
+                </select>
+              </div>
+  
+              <div class="checkbox-group">
+                <label>
+                  <input type="checkbox" id="profile-ux">
+                  Apply UX Writing Principles
+                </label>
+                <label>
+                  <input type="checkbox" id="profile-bias">
+                  Use Cognitive Biases
+                </label>
+                <label>
+                  <input type="checkbox" id="profile-emoji">
+                  Include Relevant Emojis
+                </label>
+                <label>
+                  <input type="checkbox" id="profile-auto">
+                  Auto-Rewrite on Selection
+                </label>
+              </div>
+  
+              <button id="save-profile-btn" class="btn btn-primary">
+                💾 Save Profile
+              </button>
             </div>
           </div>
-
-          <div class="settings-actions">
-            <button id="reset-settings-btn" class="btn btn-delete">
-              🔄 Reset to Default
-            </button>
-            <button id="save-settings-btn" class="btn btn-primary">
-              💾 Save Settings
-            </button>
+        </div>
+        
+        <!-- Keyboard Shortcuts Screen -->
+        <div id="keyboard-screen" class="screen">
+          <header>
+            <h2>Keyboard Shortcuts</h2>
+            <p>Quick access to SmartText features</p>
+          </header>
+  
+          <div class="shortcuts-container">
+            <div class="shortcut-list">
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Rewrite with AI</div>
+                  <div class="shortcut-description">Rewrite selected text using AI</div>
+                </div>
+                <div class="shortcut-keys" data-command="open_ai_rewrite">Ctrl+Shift+H</div>
+              </div>
+              
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Show AI Panel</div>
+                  <div class="shortcut-description">Open the AI writing panel</div>
+                </div>
+                <div class="shortcut-keys" data-command="open_ai_panel">Ctrl+Shift+P</div>
+              </div>
+              
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Format Menu</div>
+                  <div class="shortcut-description">Show text formatting menu</div>
+                </div>
+                <div class="shortcut-keys" data-command="format_text">Ctrl+Shift+F</div>
+              </div>
+              
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Emoji Menu</div>
+                  <div class="shortcut-description">Show emoji insertion menu</div>
+                </div>
+                <div class="shortcut-keys" data-command="insert_emoji">Ctrl+Shift+E</div>
+              </div>
+            </div>
+  
+            <h3>Formatting Shortcuts</h3>
+            <div class="shortcut-list">
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Bold</div>
+                  <div class="shortcut-description">Make selected text bold</div>
+                </div>
+                <div class="shortcut-keys static">Ctrl+B</div>
+              </div>
+              
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Italic</div>
+                  <div class="shortcut-description">Make selected text italic</div>
+                </div>
+                <div class="shortcut-keys static">Ctrl+I</div>
+              </div>
+              
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Strikethrough</div>
+                  <div class="shortcut-description">Add strikethrough to selected text</div>
+                </div>
+                <div class="shortcut-keys static">Ctrl+E</div>
+              </div>
+              
+              <div class="shortcut-item">
+                <div class="shortcut-info">
+                  <div class="shortcut-name">Code</div>
+                  <div class="shortcut-description">Format selected text as code</div>
+                </div>
+                <div class="shortcut-keys static">Ctrl+K</div>
+              </div>
+            </div>
+  
+            <div class="shortcuts-note">
+              <p>Click on a shortcut to edit it. Changes will take effect after restarting the browser.</p>
+              <p>Note: Some shortcuts may not work if they conflict with browser or website shortcuts.</p>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen">
+          <header>
+            <h2>Settings</h2>
+            <p>Configure your SmartText extension preferences.</p>
+          </header>
+  
+          <div class="settings-container">
+            <div class="settings-group">
+              <h3>Display Settings</h3>
+              <div class="toggle-group">
+                <label class="toggle-label">
+                  <span>Show Floating Menu</span>
+                  <label class="switch">
+                    <input type="checkbox" id="floating-menu-toggle" checked>
+                    <span class="slider round"></span>
+                  </label>
+                </label>
+                <label class="toggle-label">
+                  <span>Show Fixed Button</span>
+                  <label class="switch">
+                    <input type="checkbox" id="fixed-button-toggle" checked>
+                    <span class="slider round"></span>
+                  </label>
+                </label>
+                <label class="toggle-label">
+                  <span>Enable Keyboard Shortcuts</span>
+                  <label class="switch">
+                    <input type="checkbox" id="keyboard-shortcuts-toggle" checked>
+                    <span class="slider round"></span>
+                  </label>
+                </label>
+              </div>
+            </div>
+  
+            <div class="settings-group">
+              <h3>API Settings</h3>
+              <div class="input-group">
+                <label for="api-key">API Key</label>
+                <div class="api-key-input">
+                  <input type="password" id="api-key" class="form-control" placeholder="Enter your API key">
+                  <button id="toggle-api-key" class="icon-button">👁️</button>
+                </div>
+              </div>
+              <div class="input-group">
+                <label for="api-url">API URL</label>
+                <input type="text" id="api-url" class="form-control" placeholder="Enter API endpoint URL">
+              </div>
+              <div class="input-group">
+                <label for="model-select">Model</label>
+                <select id="model-select" class="form-control">
+                  <option value="gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                </select>
+              </div>
+            </div>
+  
+            <div class="settings-group">
+              <h3>Default Profile</h3>
+              <div class="input-group">
+                <label for="default-profile">Select Default Profile</label>
+                <select id="default-profile" class="form-control">
+                  <!-- Profiles will be loaded dynamically -->
+                </select>
+              </div>
+            </div>
+  
+            <div class="settings-actions">
+              <button id="reset-settings-btn" class="btn btn-delete">
+                🔄 Reset to Default
+              </button>
+              <button id="save-settings-btn" class="btn btn-primary">
+                💾 Save Settings
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Scripts -->
-  <script src="scripts/popup.js" type="module"></script>
-</body>
-</html>
+  
+    <!-- Scripts -->
+    <script src="scripts/popup.js" type="module"></script>
+  </body>
+  </html>
