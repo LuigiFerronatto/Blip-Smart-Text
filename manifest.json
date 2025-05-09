@@ -1,16 +1,25 @@
 {
   "manifest_version": 3,
   "name": "SmartText",
-  "version": "1.0",
-  "description": "Floating toolbar for text formatting, emoji insertion, and AI rewriting.",
+  "version": "1.1.0",
+  "description": "Improve your writing with formatting, emojis, and AI-powered text rewriting",
   "icons": {
+    "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   },
-  "permissions": ["storage", "activeTab", "contextMenus", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "storage", 
+    "activeTab", 
+    "contextMenus", 
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
-    "service_worker": "scripts/background.js"
+    "service_worker": "scripts/background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -18,7 +27,17 @@
       "js": ["scripts/content.js"],
       "css": ["styles/content.css"],
       "run_at": "document_end",
-      "all_frames": true
+      "type": "module"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "scripts/*.js",
+        "modules/*.js",
+        "assets/*"
+      ],
+      "matches": ["<all_urls>"]
     }
   ],
   "commands": {
@@ -27,12 +46,33 @@
         "default": "Ctrl+Shift+H"
       },
       "description": "Rewrite selected text with AI"
+    },
+    "open_ai_panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P"
+      },
+      "description": "Open AI panel"
+    },
+    "format_text": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F"
+      },
+      "description": "Show format menu"
+    },
+    "insert_emoji": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E"
+      },
+      "description": "Show emoji menu"
     }
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "48": "assets/icons/icon48.png"
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
     }
-  }
+  },
+  "options_page": "options.html"
 }

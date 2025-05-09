@@ -1,48 +1,48 @@
 /**
  * styles/content.css
- * Estilos melhorados para os elementos injetados na página
+ * Estilos para os elementos injetados na página
  */
 
  :root {
   /* Cores principais */
-  --blip-primary: #1968F0;
-  --blip-secondary: #0C4EC0;
-  --blip-dark: #072F73;
-  --blip-light: #C5D9FB;
-  --blip-bg: #F8FBFB;
+  --smarttext-primary: #1968F0;
+  --smarttext-secondary: #0C4EC0;
+  --smarttext-dark: #072F73;
+  --smarttext-light: #C5D9FB;
+  --smarttext-bg: #F8FBFB;
   
   /* Cores de feedback */
-  --blip-success: #35DE90;
-  --blip-error: #E60F0F;
-  --blip-warning: #FBCF23;
-  --blip-info: #1BA766;
+  --smarttext-success: #35DE90;
+  --smarttext-error: #E60F0F;
+  --smarttext-warning: #FBCF23;
+  --smarttext-info: #1BA766;
   
   /* Cores neutras */
-  --blip-text: #292929;
-  --blip-text-light: #666666;
-  --blip-border: #E0E0E0;
-  --blip-hover: rgba(25, 104, 240, 0.1);
+  --smarttext-text: #292929;
+  --smarttext-text-light: #666666;
+  --smarttext-border: #E0E0E0;
+  --smarttext-hover: rgba(25, 104, 240, 0.1);
   
   /* Sombras e elevações */
-  --blip-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --blip-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
-  --blip-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  --smarttext-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --smarttext-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+  --smarttext-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
   
   /* Dimensões */
-  --blip-border-radius: 8px;
-  --blip-menu-width: 320px;
-  --blip-panel-width: 360px;
+  --smarttext-border-radius: 8px;
+  --smarttext-menu-width: 320px;
+  --smarttext-panel-width: 360px;
 }
 
 /* Estilos gerais aplicados a todos os elementos da extensão */
-[id^="blip-"] {
+[id^="smarttext-"] {
   font-family: 'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
   line-height: 1.5;
-  color: var(--blip-text);
+  color: var(--smarttext-text);
 }
 
-[id^="blip-"] * {
+[id^="smarttext-"] * {
   box-sizing: border-box;
 }
 
@@ -50,24 +50,26 @@
    MENU FLUTUANTE
 ========================== */
 
-.blip-floating-menu {
+.smarttext-floating-menu {
   position: absolute;
   background: #FFFFFF;
-  border: 1px solid var(--blip-border);
-  border-radius: var(--blip-border-radius);
-  box-shadow: var(--blip-shadow-md);
-  z-index: 2147483647; /* Máximo z-index */
+  border: 1px solid var(--smarttext-border);
+  border-radius: var(--smarttext-border-radius);
+  box-shadow: var(--smarttext-shadow-md);
+  z-index: 2147483647; /* Máximo z-index para ficar acima de tudo */
   transition: all 0.2s ease;
   overflow: hidden;
-  min-width: 300px;
+  min-width: 400px;
   max-width: 400px;
   padding: 0;
   display: flex;
   flex-direction: column;
+  opacity: 0;
+  transform: translateY(10px);
 }
 
 /* Menu principal */
-#blip-menu {
+#smarttext-format-menu {
   width: auto;
   padding: 8px;
 }
@@ -82,14 +84,14 @@
 
 .menu-row + .menu-row {
   margin-top: 8px;
-  border-top: 1px solid var(--blip-border);
+  border-top: 1px solid var(--smarttext-border);
   padding-top: 8px;
 }
 
 .menu-separator {
   width: 1px;
   height: 20px;
-  background-color: var(--blip-border);
+  background-color: var(--smarttext-border);
   margin: 0 4px;
 }
 
@@ -100,7 +102,7 @@
   border-radius: 4px;
   padding: 6px 8px;
   font-size: 14px;
-  color: var(--blip-text);
+  color: var(--smarttext-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -110,12 +112,12 @@
 }
 
 .menu-btn:hover {
-  background: var(--blip-hover);
-  border-color: var(--blip-light);
+  background: var(--smarttext-hover);
+  border-color: var(--smarttext-light);
 }
 
 .menu-btn.active {
-  background: var(--blip-light);
+  background: var(--smarttext-light);
   transform: scale(0.95);
 }
 
@@ -130,7 +132,7 @@
 
 /* Botão de IA */
 .menu-btn.ai-btn {
-  background: linear-gradient(135deg, var(--blip-primary), var(--blip-secondary));
+  background: linear-gradient(135deg, var(--smarttext-primary), var(--smarttext-secondary));
   color: white;
   padding: 6px 12px;
   border-radius: 16px;
@@ -138,7 +140,7 @@
 }
 
 .menu-btn.ai-btn:hover {
-  background: linear-gradient(135deg, var(--blip-secondary), var(--blip-dark));
+  background: linear-gradient(135deg, var(--smarttext-secondary), var(--smarttext-dark));
   box-shadow: 0 2px 4px rgba(9, 77, 192, 0.3);
 }
 
@@ -153,9 +155,9 @@
   right: 0;
   top: 100%;
   background: white;
-  border: 1px solid var(--blip-border);
-  border-radius: var(--blip-border-radius);
-  box-shadow: var(--blip-shadow-md);
+  border: 1px solid var(--smarttext-border);
+  border-radius: var(--smarttext-border-radius);
+  box-shadow: var(--smarttext-shadow-md);
   min-width: 180px;
   z-index: 2147483647;
   padding: 4px;
@@ -177,13 +179,13 @@
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  color: var(--blip-text);
+  color: var(--smarttext-text);
   font-size: 14px;
   gap: 8px;
 }
 
 .dropdown-item:hover {
-  background: var(--blip-hover);
+  background: var(--smarttext-hover);
 }
 
 /* ==========================
@@ -203,14 +205,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--blip-border);
+  border-bottom: 1px solid var(--smarttext-border);
 }
 
 .emoji-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 500;
-  color: var(--blip-text);
+  color: var(--smarttext-text);
 }
 
 .emoji-close-btn {
@@ -218,7 +220,7 @@
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: var(--blip-text-light);
+  color: var(--smarttext-text-light);
   width: 24px;
   height: 24px;
   display: flex;
@@ -228,14 +230,14 @@
 }
 
 .emoji-close-btn:hover {
-  background: var(--blip-hover);
+  background: var(--smarttext-hover);
 }
 
 .emoji-categories-tabs {
   display: flex;
   overflow-x: auto;
   padding: 0 12px;
-  border-bottom: 1px solid var(--blip-border);
+  border-bottom: 1px solid var(--smarttext-border);
   scrollbar-width: none; /* Firefox */
 }
 
@@ -250,13 +252,13 @@
   padding: 8px 12px;
   font-size: 14px;
   cursor: pointer;
-  color: var(--blip-text-light);
+  color: var(--smarttext-text-light);
   white-space: nowrap;
 }
 
 .category-tab.active {
-  color: var(--blip-primary);
-  border-bottom-color: var(--blip-primary);
+  color: var(--smarttext-primary);
+  border-bottom-color: var(--smarttext-primary);
   font-weight: 500;
 }
 
@@ -291,19 +293,19 @@
 }
 
 .emoji-btn:hover {
-  background: var(--blip-hover);
+  background: var(--smarttext-hover);
   transform: scale(1.1);
 }
 
 .emoji-search {
   padding: 12px;
-  border-top: 1px solid var(--blip-border);
+  border-top: 1px solid var(--smarttext-border);
 }
 
 .emoji-search-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--blip-border);
+  border: 1px solid var(--smarttext-border);
   border-radius: 20px;
   font-size: 14px;
   outline: none;
@@ -311,7 +313,7 @@
 }
 
 .emoji-search-input:focus {
-  border-color: var(--blip-primary);
+  border-color: var(--smarttext-primary);
   box-shadow: 0 0 0 2px rgba(25, 104, 240, 0.2);
 }
 
@@ -319,15 +321,15 @@
    BOTÃO FIXO
 ========================== */
 
-.blip-fixed-button {
+.smarttext-fixed-button {
   position: fixed;
   bottom: 30px;
   right: 30px;
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--blip-primary), var(--blip-secondary));
-  box-shadow: var(--blip-shadow-md);
+  background: linear-gradient(135deg, var(--smarttext-primary), var(--smarttext-secondary));
+  box-shadow: var(--smarttext-shadow-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -336,9 +338,9 @@
   transition: all 0.3s ease;
 }
 
-.blip-fixed-button:hover {
+.smarttext-fixed-button:hover {
   transform: scale(1.05);
-  box-shadow: var(--blip-shadow-lg);
+  box-shadow: var(--smarttext-shadow-lg);
 }
 
 .fixed-button-icon {
@@ -361,7 +363,7 @@
   transition: opacity 0.2s ease;
 }
 
-.blip-fixed-button:hover .fixed-button-tooltip {
+.smarttext-fixed-button:hover .fixed-button-tooltip {
   opacity: 1;
 }
 
@@ -369,19 +371,25 @@
    PAINEL LATERAL
 ========================== */
 
-.blip-ai-panel {
+.smarttext-ai-panel {
   position: fixed;
   top: 0;
   right: 0;
-  width: var(--blip-panel-width);
+  width: var(--smarttext-panel-width);
   height: 100%;
   background: white;
-  box-shadow: var(--blip-shadow-lg);
+  box-shadow: var(--smarttext-shadow-lg);
   z-index: 2147483646;
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.3s ease;
   overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+
+.smarttext-ai-panel.active {
+  transform: translateX(0);
 }
 
 .panel-header {
@@ -389,7 +397,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background: linear-gradient(135deg, var(--blip-primary), var(--blip-secondary));
+  background: linear-gradient(135deg, var(--smarttext-primary), var(--smarttext-secondary));
   color: white;
 }
 
@@ -428,11 +436,11 @@
   margin: 0 0 4px 0;
   font-size: 16px;
   font-weight: 500;
-  color: var(--blip-primary);
+  color: var(--smarttext-primary);
 }
 
 .panel-description {
-  color: var(--blip-text-light);
+  color: var(--smarttext-text-light);
   font-size: 14px;
   margin-bottom: 20px;
 }
@@ -452,8 +460,8 @@
 .input-group select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--blip-border);
-  border-radius: var(--blip-border-radius);
+  border: 1px solid var(--smarttext-border);
+  border-radius: var(--smarttext-border-radius);
   font-size: 14px;
   line-height: 1.5;
   transition: all 0.2s ease;
@@ -467,7 +475,7 @@
 .input-group textarea:focus,
 .input-group select:focus {
   outline: none;
-  border-color: var(--blip-primary);
+  border-color: var(--smarttext-primary);
   box-shadow: 0 0 0 2px rgba(25, 104, 240, 0.2);
 }
 
@@ -487,13 +495,13 @@
   margin-right: 8px;
   width: 16px;
   height: 16px;
-  accent-color: var(--blip-primary);
+  accent-color: var(--smarttext-primary);
 }
 
 .rewrite-button,
 .copy-button,
 .insert-button {
-  background: var(--blip-primary);
+  background: var(--smarttext-primary);
   color: white;
   border: none;
   border-radius: 4px;
@@ -511,11 +519,11 @@
 }
 
 .rewrite-button:hover {
-  background: var(--blip-secondary);
+  background: var(--smarttext-secondary);
 }
 
 .rewrite-button:disabled {
-  background: var(--blip-text-light);
+  background: var(--smarttext-text-light);
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -529,8 +537,8 @@
 .copy-button,
 .insert-button {
   flex: 1;
-  background: var(--blip-light);
-  color: var(--blip-dark);
+  background: var(--smarttext-light);
+  color: var(--smarttext-dark);
 }
 
 .copy-button:hover,
@@ -539,78 +547,92 @@
 }
 
 /* ==========================
-   INDICADORES E NOTIFICAÇÕES
+   LOADER E NOTIFICAÇÕES
 ========================== */
 
-#blip-loading-indicator {
+.smarttext-loader {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.6);
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 2147483647;
 }
 
-.loading-spinner {
+.loader-spinner {
   width: 40px;
   height: 40px;
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: var(--blip-primary);
+  border-top-color: var(--smarttext-primary);
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
 }
 
-.loading-text {
+.loading-spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+.loader-text {
   color: white;
   font-size: 16px;
   font-weight: 500;
 }
 
-.blip-notification {
+.smarttext-toast {
   position: fixed;
   bottom: 24px;
   right: 24px;
   min-width: 300px;
   background: white;
-  border-radius: var(--blip-border-radius);
-  box-shadow: var(--blip-shadow-md);
+  border-radius: var(--smarttext-border-radius);
+  box-shadow: var(--smarttext-shadow-md);
   padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   z-index: 2147483646;
-  animation: slideInUp 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.blip-notification.success {
-  border-left: 4px solid var(--blip-success);
+.smarttext-toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.blip-notification.error {
-  border-left: 4px solid var(--blip-error);
+.smarttext-toast.success {
+  border-left: 4px solid var(--smarttext-success);
 }
 
-.blip-notification.info {
-  border-left: 4px solid var(--blip-primary);
+.smarttext-toast.error {
+  border-left: 4px solid var(--smarttext-error);
 }
 
-.notification-icon {
+.smarttext-toast.info {
+  border-left: 4px solid var(--smarttext-primary);
+}
+
+.toast-icon {
   font-size: 20px;
 }
 
-.notification-message {
+.toast-message {
   font-size: 14px;
-  color: var(--blip-text);
-}
-
-.blip-notification.fadeOut {
-  animation: fadeOut 0.3s forwards;
+  color: var(--smarttext-text);
+  flex: 1;
 }
 
 /* ==========================
@@ -620,11 +642,6 @@
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; visibility: hidden; }
 }
 
 @keyframes slideInRight {
@@ -647,25 +664,25 @@
 ========================== */
 
 @media screen and (max-width: 768px) {
-  .blip-fixed-button {
+  .smarttext-fixed-button {
     bottom: 20px;
     right: 20px;
     width: 42px;
     height: 42px;
   }
   
-  .blip-ai-panel {
+  .smarttext-ai-panel {
     width: 100%;
     max-width: 100%;
   }
   
-  .blip-notification {
+  .smarttext-toast {
     min-width: auto;
     width: calc(100% - 48px);
     max-width: 400px;
   }
   
-  .blip-floating-menu {
+  .smarttext-floating-menu {
     max-width: 320px;
   }
   
@@ -679,9 +696,8 @@
 ========================== */
 
 @media (prefers-color-scheme: dark) {
-  /* Podemos adicionar suporte automático para tema escuro */
-  .blip-floating-menu,
-  .blip-ai-panel,
+  .smarttext-floating-menu,
+  .smarttext-ai-panel,
   .dropdown-content {
     background: #292929;
     border-color: #404040;
@@ -718,11 +734,11 @@
     border-color: #444444;
   }
   
-  .blip-notification {
+  .smarttext-toast {
     background: #292929;
   }
   
-  .notification-message {
+  .toast-message {
     color: #e0e0e0;
   }
 }

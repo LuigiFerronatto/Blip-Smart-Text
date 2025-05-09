@@ -1,262 +1,245 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blip SmartText</title>
-  <link rel="stylesheet" href="styles/popup.css">
+  <title>SmartText Extension</title>
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
   <div class="popup-container">
-    <!-- Sidebar de Navegação -->
-    <aside class="sidebar">
+    <!-- Sidebar -->
+    <div class="sidebar">
       <div class="logo">
         <img src="assets/icons/icon48.png" alt="SmartText Logo">
         <h1>SmartText</h1>
       </div>
-      <nav class="nav-menu">
+      <div class="nav-menu">
         <button class="nav-item active" data-screen="home">
-          <i class="icon">🏠</i>
-          <span>Início</span>
+          <span class="icon">🏠</span>
+          <span>Home</span>
         </button>
         <button class="nav-item" data-screen="ai-writing">
-          <i class="icon">🤖</i>
-          <span>IA Escrita</span>
+          <span class="icon">✨</span>
+          <span>AI Writing</span>
         </button>
         <button class="nav-item" data-screen="profiles">
-          <i class="icon">👤</i>
-          <span>Perfis</span>
+          <span class="icon">👤</span>
+          <span>Profiles</span>
         </button>
         <button class="nav-item" data-screen="settings">
-          <i class="icon">⚙️</i>
-          <span>Config</span>
+          <span class="icon">⚙️</span>
+          <span>Settings</span>
         </button>
-        <button class="nav-item" data-screen="help">
-          <i class="icon">❓</i>
-          <span>Ajuda</span>
-        </button>
-      </nav>
-      <div class="sidebar-footer">
-        <p>v1.1.0</p>
       </div>
-    </aside>
+      <div class="sidebar-footer">
+        v1.1.0
+      </div>
+    </div>
 
-    <!-- Área de Conteúdo Principal -->
-    <main class="content-area">
-      <!-- Tela Inicial -->
-      <section id="home-screen" class="screen active">
+    <!-- Content Area -->
+    <div class="content-area">
+      <!-- Home Screen -->
+      <div id="home-screen" class="screen active">
         <header>
-          <h2>Seu Assistente Inteligente de Escrita</h2>
-          <p>Transforme sua comunicação com tecnologia de ponta</p>
+          <h2>Welcome to SmartText</h2>
+          <p>Select text on any webpage to start improving your writing.</p>
         </header>
+
+        <div class="status-section">
+          <div class="status-item">
+            <span class="status-label">Extension:</span>
+            <span id="extension-status" class="status-value">Checking...</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Current Profile:</span>
+            <span id="current-profile" class="status-value">Default</span>
+          </div>
+        </div>
 
         <div class="feature-grid">
           <div class="feature-card">
-            <div class="feature-icon format-icon">✏️</div>
-            <h3>Formatação Rápida</h3>
-            <p>Formate texto instantaneamente com estilos inteligentes</p>
+            <div class="feature-icon format-icon">F</div>
+            <h3>Text Formatting</h3>
+            <p>Quick markdown formatting for selected text.</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon ai-icon">🤖</div>
-            <h3>Reescrita com IA</h3>
-            <p>Melhore seus textos com IA generativa</p>
+            <div class="feature-icon ai-icon">AI</div>
+            <h3>AI Rewriting</h3>
+            <p>Rewrite text with AI to improve quality.</p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon emoji-icon">😊</div>
-            <h3>Emojis Inteligentes</h3>
-            <p>Adicione expressividade com sugestões contextuais</p>
+            <div class="feature-icon emoji-icon">😀</div>
+            <h3>Emoji Picker</h3>
+            <p>Insert emojis into any editable field.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon profile-icon">P</div>
+            <h3>Writing Profiles</h3>
+            <p>Custom profiles for different writing styles.</p>
           </div>
         </div>
 
         <div class="quick-actions">
-          <button class="btn btn-primary" id="ai-writing-btn">
-            🤖 Iniciar Reescrita
+          <button id="ai-writing-btn" class="btn btn-primary">
+            <span class="icon">✨</span> AI Writing
           </button>
-          <button class="btn btn-secondary" id="config-btn">
-            ⚙️ Configurações
+          <button id="config-btn" class="btn btn-secondary">
+            <span class="icon">⚙️</span> Settings
           </button>
         </div>
+      </div>
 
-        <div class="status-section">
-          <div class="status-item">
-            <span class="status-label">Status:</span>
-            <span class="status-value active" id="extension-status">Ativo</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Perfil:</span>
-            <span class="status-value" id="current-profile">Profissional</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tela de Escrita com IA -->
-      <section id="ai-writing-screen" class="screen">
+      <!-- AI Writing Screen -->
+      <div id="ai-writing-screen" class="screen">
         <header>
-          <h2>Reescrita Inteligente</h2>
-          <p>Transforme seu texto com IA avançada</p>
+          <h2>AI Writing Assistant</h2>
+          <p>Rewrite text to improve clarity, style, and impact.</p>
         </header>
 
         <div class="ai-writing-container">
           <div class="input-group">
-            <label for="writing-style">Estilo de Escrita</label>
-            <select id="writing-style" class="form-control">
-              <option value="professional">Profissional</option>
-              <option value="casual">Casual</option>
-              <option value="creative">Criativo</option>
-              <option value="technical">Técnico</option>
-              <option value="persuasive">Persuasivo</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label for="ai-input">Texto Original</label>
-            <textarea 
-              id="ai-input" 
-              placeholder="Cole aqui o texto para reescrever..."
-              rows="5"
-            ></textarea>
+            <label for="ai-input">Original Text</label>
+            <textarea id="ai-input" class="form-control" placeholder="Paste or type text here..."></textarea>
           </div>
 
           <div class="ai-controls">
+            <div class="select-group">
+              <label for="writing-style">Style</label>
+              <select id="writing-style" class="form-control">
+                <option value="Professional">Professional</option>
+                <option value="Casual">Casual</option>
+                <option value="Creative">Creative</option>
+                <option value="Technical">Technical</option>
+                <option value="Persuasive">Persuasive</option>
+              </select>
+            </div>
+
             <div class="checkbox-group">
               <label>
                 <input type="checkbox" id="ux-optimization">
-                Otimizar para UX
+                UX Writing
               </label>
               <label>
                 <input type="checkbox" id="cognitive-bias">
-                Aplicar técnicas persuasivas
+                Persuasive Techniques
               </label>
               <label>
                 <input type="checkbox" id="add-emojis">
-                Adicionar emojis
+                Add Emojis
               </label>
             </div>
-
-            <button class="btn btn-primary" id="rewrite-btn">
-              🔄 Reescrever
-            </button>
           </div>
 
+          <button id="rewrite-btn" class="btn btn-primary">
+            🔄 Rewrite with AI
+          </button>
+
           <div class="input-group">
-            <label for="ai-output">Texto Reescrito</label>
-            <textarea 
-              id="ai-output" 
-              placeholder="Texto reescrito aparecerá aqui..."
-              rows="5"
-              readonly
-            ></textarea>
+            <label for="ai-output">Rewritten Text</label>
+            <textarea id="ai-output" class="form-control" placeholder="Rewritten text will appear here..." readonly></textarea>
           </div>
 
           <div class="output-actions">
-            <button class="btn btn-secondary" id="copy-output">📋 Copiar</button>
-            <button class="btn btn-secondary" id="save-output">💾 Salvar</button>
+            <button id="copy-output" class="btn btn-secondary">
+              📋 Copy
+            </button>
+            <button id="save-output" class="btn btn-secondary">
+              💾 Save as File
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- Tela de Perfis -->
-      <section id="profiles-screen" class="screen">
+      <!-- Profiles Screen -->
+      <div id="profiles-screen" class="screen">
         <header>
-          <h2>Gerenciamento de Perfis</h2>
-          <p>Personalize seus estilos de escrita</p>
+          <h2>Writing Profiles</h2>
+          <p>Customize and manage your writing profiles.</p>
         </header>
 
         <div class="profiles-container">
           <div class="profile-selector">
             <select id="profile-list" class="form-control">
-              <option value="default">Perfil Padrão</option>
-              <option value="professional">Profissional</option>
-              <option value="casual">Casual</option>
-              <option value="marketing">Marketing</option>
-              <option value="technical">Técnico</option>
+              <!-- Profiles will be loaded dynamically -->
             </select>
             <div class="profile-actions">
-              <button class="btn btn-secondary" id="new-profile-btn">➕ Novo</button>
-              <button class="btn btn-delete" id="delete-profile-btn">🗑️ Excluir</button>
+              <button id="new-profile-btn" class="btn-icon" title="New Profile">+</button>
+              <button id="delete-profile-btn" class="btn-icon" title="Delete Profile">🗑️</button>
             </div>
           </div>
 
           <div class="profile-details">
             <div class="input-group">
-              <label for="profile-name">Nome do Perfil</label>
-              <input type="text" id="profile-name" class="form-control" placeholder="Nome do perfil">
+              <label for="profile-name">Profile Name</label>
+              <input type="text" id="profile-name" class="form-control" placeholder="Profile name">
             </div>
+
             <div class="input-group">
-              <label for="profile-style">Estilo Padrão</label>
+              <label for="profile-style">Writing Style</label>
               <select id="profile-style" class="form-control">
-                <option value="professional">Profissional</option>
-                <option value="casual">Casual</option>
-                <option value="creative">Criativo</option>
-                <option value="technical">Técnico</option>
-                <option value="persuasive">Persuasivo</option>
+                <option value="Professional">Professional</option>
+                <option value="Casual">Casual</option>
+                <option value="Creative">Creative</option>
+                <option value="Technical">Technical</option>
+                <option value="Persuasive">Persuasive</option>
               </select>
             </div>
+
             <div class="checkbox-group">
               <label>
-                <input type="checkbox" id="profile-ux"> Otimização UX
+                <input type="checkbox" id="profile-ux">
+                Apply UX Writing Principles
               </label>
               <label>
-                <input type="checkbox" id="profile-bias"> Técnicas persuasivas
+                <input type="checkbox" id="profile-bias">
+                Use Cognitive Biases
               </label>
               <label>
-                <input type="checkbox" id="profile-emoji"> Adicionar emojis
+                <input type="checkbox" id="profile-emoji">
+                Include Relevant Emojis
               </label>
               <label>
-                <input type="checkbox" id="profile-auto"> Auto-reescrever ao selecionar
+                <input type="checkbox" id="profile-auto">
+                Auto-Rewrite on Selection
               </label>
             </div>
-            <div class="input-group">
-              <label for="profile-prompt">Instruções Personalizadas (opcional)</label>
-              <textarea id="profile-prompt" class="form-control" placeholder="Adicione instruções específicas para a IA..."></textarea>
-            </div>
-            <button class="btn btn-primary" id="save-profile-btn">💾 Salvar Perfil</button>
+
+            <button id="save-profile-btn" class="btn btn-primary">
+              💾 Save Profile
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- Tela de Configurações -->
-      <section id="settings-screen" class="screen">
+      <!-- Settings Screen -->
+      <div id="settings-screen" class="screen">
         <header>
-          <h2>Configurações</h2>
-          <p>Personalize o funcionamento da extensão</p>
+          <h2>Settings</h2>
+          <p>Configure your SmartText extension preferences.</p>
         </header>
 
         <div class="settings-container">
           <div class="settings-group">
-            <h3>Configurações Gerais</h3>
-            
-            <div class="input-group">
-              <label for="default-profile">Perfil Padrão</label>
-              <select id="default-profile" class="form-control">
-                <option value="default">Perfil Padrão</option>
-                <option value="professional">Profissional</option>
-                <option value="casual">Casual</option>
-                <option value="marketing">Marketing</option>
-                <option value="technical">Técnico</option>
-              </select>
-            </div>
-            
+            <h3>Display Settings</h3>
             <div class="toggle-group">
               <label class="toggle-label">
-                <span>Menu flutuante ao selecionar texto</span>
+                <span>Show Floating Menu</span>
                 <label class="switch">
                   <input type="checkbox" id="floating-menu-toggle" checked>
                   <span class="slider round"></span>
                 </label>
               </label>
-              
               <label class="toggle-label">
-                <span>Botão fixo de IA</span>
+                <span>Show Fixed Button</span>
                 <label class="switch">
                   <input type="checkbox" id="fixed-button-toggle" checked>
                   <span class="slider round"></span>
                 </label>
               </label>
-              
               <label class="toggle-label">
-                <span>Atalhos de teclado</span>
+                <span>Enable Keyboard Shortcuts</span>
                 <label class="switch">
                   <input type="checkbox" id="keyboard-shortcuts-toggle" checked>
                   <span class="slider round"></span>
@@ -266,135 +249,95 @@
           </div>
 
           <div class="settings-group">
-            <h3>Configuração da API</h3>
-            
+            <h3>API Settings</h3>
             <div class="input-group">
-              <label for="api-key">Chave da API</label>
+              <label for="api-key">API Key</label>
               <div class="api-key-input">
-                <input type="password" id="api-key" class="form-control" placeholder="Chave da API">
+                <input type="password" id="api-key" class="form-control" placeholder="Enter your API key">
                 <button id="toggle-api-key" class="icon-button">👁️</button>
               </div>
             </div>
-            
             <div class="input-group">
-              <label for="api-url">URL da API</label>
-              <input type="text" id="api-url" class="form-control" placeholder="URL da API">
+              <label for="api-url">API URL</label>
+              <input type="text" id="api-url" class="form-control" placeholder="Enter API endpoint URL">
             </div>
-            
             <div class="input-group">
-              <label for="model-select">Modelo de IA</label>
+              <label for="model-select">Model</label>
               <select id="model-select" class="form-control">
-                <option value="gpt-4-0613">GPT-4</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="text-davinci-003">Davinci</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
               </select>
             </div>
           </div>
-          
+
+          <div class="settings-group">
+            <h3>Default Profile</h3>
+            <div class="input-group">
+              <label for="default-profile">Select Default Profile</label>
+              <select id="default-profile" class="form-control">
+                <!-- Profiles will be loaded dynamically -->
+              </select>
+            </div>
+          </div>
+
           <div class="settings-actions">
-            <button class="btn btn-primary" id="save-settings-btn">💾 Salvar Configurações</button>
-            <button class="btn btn-secondary" id="reset-settings-btn">🔄 Restaurar Padrões</button>
+            <button id="reset-settings-btn" class="btn btn-delete">
+              🔄 Reset to Default
+            </button>
+            <button id="save-settings-btn" class="btn btn-primary">
+              💾 Save Settings
+            </button>
           </div>
         </div>
-      </section>
-
-      <!-- Tela de Ajuda -->
-      <section id="help-screen" class="screen">
-        <header>
-          <h2>Central de Ajuda</h2>
-          <p>Dúvidas frequentes e guia de uso</p>
-        </header>
-
-        <div class="help-topics">
-          <div class="help-card">
-            <div class="help-icon">📝</div>
-            <h3>Formatação</h3>
-            <p>Aprenda a formatar texto rapidamente</p>
-            <button class="btn btn-secondary help-topic-btn" data-topic="formatting">Ver Guia</button>
-          </div>
-          <div class="help-card">
-            <div class="help-icon">🤖</div>
-            <h3>Reescrita IA</h3>
-            <p>Dicas para melhorar seus textos</p>
-            <button class="btn btn-secondary help-topic-btn" data-topic="ai-writing">Ver Guia</button>
-          </div>
-          <div class="help-card">
-            <div class="help-icon">😀</div>
-            <h3>Emojis</h3>
-            <p>Como usar emojis inteligentemente</p>
-            <button class="btn btn-secondary help-topic-btn" data-topic="emojis">Ver Guia</button>
-          </div>
-        </div>
-
-        <div class="help-content" id="help-content">
-          <div class="help-content-header">
-            <h3 id="help-content-title">Selecione um tópico</h3>
-            <button class="btn-icon" id="close-help-content">×</button>
-          </div>
-          <div class="help-content-body" id="help-content-body">
-            <p>Clique em um dos tópicos acima para ver o conteúdo de ajuda.</p>
-          </div>
-        </div>
-
-        <div class="feedback-section">
-          <h3>Precisa de Suporte?</h3>
-          <p>Entre em contato conosco ou visite nossa documentação completa</p>
-          <div class="support-actions">
-            <a href="mailto:suporte@blip.ai" class="btn btn-secondary">📧 Contato</a>
-            <a href="https://blip.ai/docs" target="_blank" class="btn btn-primary">📚 Documentação</a>
-          </div>
-        </div>
-      </section>
-    </main>
+      </div>
+    </div>
   </div>
 
-  <!-- Modais -->
-  <div class="modal" id="new-profile-modal">
+  <!-- Modals -->
+  <div id="new-profile-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Criar Novo Perfil</h3>
-        <button class="modal-close">×</button>
+        <h3>Create New Profile</h3>
+        <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="input-group">
-          <label for="new-profile-name">Nome do Perfil</label>
-          <input type="text" id="new-profile-name" class="form-control" placeholder="Ex: Marketing, Técnico, Formal...">
+          <label for="new-profile-name">Profile Name</label>
+          <input type="text" id="new-profile-name" class="form-control" placeholder="Enter profile name">
         </div>
         <div class="input-group">
-          <label for="new-profile-base">Baseado em</label>
+          <label for="new-profile-base">Base on Existing</label>
           <select id="new-profile-base" class="form-control">
-            <option value="default">Perfil Padrão</option>
-            <option value="professional">Profissional</option>
-            <option value="casual">Casual</option>
-            <option value="marketing">Marketing</option>
-            <option value="technical">Técnico</option>
+            <!-- Profiles will be loaded dynamically -->
           </select>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary modal-close">Cancelar</button>
-        <button class="btn btn-primary" id="create-profile-btn">Criar</button>
+        <button class="btn btn-secondary modal-close">Cancel</button>
+        <button id="create-profile-btn" class="btn btn-primary">Create</button>
       </div>
     </div>
   </div>
 
-  <div class="modal" id="delete-profile-modal">
+  <div id="delete-profile-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Excluir Perfil</h3>
-        <button class="modal-close">×</button>
+        <h3>Delete Profile</h3>
+        <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Tem certeza que deseja excluir o perfil <strong id="delete-profile-name">Perfil</strong>?</p>
-        <p class="warning-text">Esta ação não pode ser desfeita.</p>
+        <p>Are you sure you want to delete the profile <strong id="delete-profile-name">Profile Name</strong>?</p>
+        <p class="warning-text">This action cannot be undone.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary modal-close">Cancelar</button>
-        <button class="btn btn-delete" id="confirm-delete-btn">Excluir</button>
+        <button class="btn btn-secondary modal-close">Cancel</button>
+        <button id="confirm-delete-btn" class="btn btn-delete">Delete</button>
       </div>
     </div>
   </div>
 
-  <script src="scripts/popup.js"></script>
+  <!-- Scripts -->
+  <script src="scripts/popup.js" type="module"></script>
 </body>
 </html>

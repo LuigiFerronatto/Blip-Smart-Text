@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to SmartText</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/welcome.css">
+</head>
+<body>
+  <div class="welcome-container">
+    <header class="welcome-header">
+      <div class="logo">
+        <img src="assets/icons/icon128.png" alt="SmartText Logo">
+        <h1>SmartText</h1>
+      </div>
+      <p class="version">v1.1.0</p>
+    </header>
+
+    <main class="welcome-content">
+      <section class="welcome-hero">
+        <h2>Welcome to SmartText!</h2>
+        <p class="subtitle">Your AI-powered writing assistant that works on any website.</p>
+        
+        <div class="hero-image">
+          <img src="assets/welcome/hero-image.png" alt="SmartText in action">
+        </div>
+      </section>
+
+      <section class="features-section">
+        <h3>What You Can Do with SmartText</h3>
+        
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <img src="assets/welcome/format-icon.svg" alt="Format Icon">
+            </div>
+            <h4>Format Text</h4>
+            <p>Select any text on a webpage to access formatting tools: bold, italic, lists, and more.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">
+              <img src="assets/welcome/ai-icon.svg" alt="AI Icon">
+            </div>
+            <h4>AI Rewriting</h4>
+            <p>Use AI to improve your writing with one click. Perfect for emails, posts, and documents.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">
+              <img src="assets/welcome/emoji-icon.svg" alt="Emoji Icon">
+            </div>
+            <h4>Emoji Picker</h4>
+            <p>Quickly insert emojis into any text field to enhance your messages.</p>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-icon">
+              <img src="assets/welcome/profile-icon.svg" alt="Profile Icon">
+            </div>
+            <h4>Writing Profiles</h4>
+            <p>Create custom profiles for different writing styles: professional, casual, technical, and more.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="getting-started">
+        <h3>Getting Started</h3>
+        
+        <div class="steps-container">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h4>Select Text</h4>
+              <p>Select any text on a webpage to see the SmartText formatting menu appear.</p>
+              <img src="assets/welcome/step1.png" alt="Step 1: Select Text" class="step-image">
+            </div>
+          </div>
+          
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h4>Format or Rewrite</h4>
+              <p>Use the formatting tools or click "Rewrite with AI" to improve your text.</p>
+              <img src="assets/welcome/step2.png" alt="Step 2: Format or Rewrite" class="step-image">
+            </div>
+          </div>
+          
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h4>Customize Settings</h4>
+              <p>Click the SmartText icon in your toolbar to access more options and customize profiles.</p>
+              <img src="assets/welcome/step3.png" alt="Step 3: Customize Settings" class="step-image">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="api-setup">
+        <h3>Set Up Your API Key</h3>
+        <p>SmartText uses the OpenAI API for AI rewriting. You'll need to provide your own API key:</p>
+        
+        <div class="api-steps">
+          <ol>
+            <li>Sign up for an account at <a href="https://openai.com" target="_blank">OpenAI</a> if you don't have one</li>
+            <li>Create an API key in your OpenAI dashboard</li>
+            <li>Open SmartText settings by clicking the extension icon</li>
+            <li>Go to the "Settings" tab and enter your API key</li>
+          </ol>
+        </div>
+        
+        <div class="note">
+          <p><strong>Note:</strong> Your API key is stored locally in your browser and is only used to communicate with the OpenAI API.</p>
+        </div>
+      </section>
+
+      <section class="keyboard-shortcuts">
+        <h3>Keyboard Shortcuts</h3>
+        <p>Speed up your workflow with these handy shortcuts:</p>
+        
+        <div class="shortcuts-grid">
+          <div class="shortcut">
+            <div class="shortcut-keys">Ctrl+Shift+H</div>
+            <div class="shortcut-desc">Rewrite selected text with AI</div>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">Ctrl+Shift+P</div>
+            <div class="shortcut-desc">Open AI panel</div>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">Ctrl+Shift+F</div>
+            <div class="shortcut-desc">Show format menu</div>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">Ctrl+Shift+E</div>
+            <div class="shortcut-desc">Show emoji menu</div>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">Ctrl+B</div>
+            <div class="shortcut-desc">Bold text</div>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">Ctrl+I</div>
+            <div class="shortcut-desc">Italic text</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="action-buttons">
+      <a href="options.html" class="btn btn-secondary">Settings</a>
+      <button id="get-started-btn" class="btn btn-primary">Get Started</button>
+    </div>
+
+    <footer class="welcome-footer">
+      <p>&copy; 2024 SmartText - All Rights Reserved</p>
+    </footer>
+  </div>
+
+  <script>
+    // Close welcome page when Get Started is clicked
+    document.getElementById('get-started-btn').addEventListener('click', () => {
+      window.close();
+    });
+  </script>
+</body>
+</html>

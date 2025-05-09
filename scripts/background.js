@@ -1,397 +1,279 @@
 /**
  * scripts/background.js
- * Script em segundo plano da extensão com tratamento de módulo AI aprimorado
+ * Background script for the SmartText extension
  */
 
-// Função de reescrita com melhor tratamento de erro e suporte a mais perfis
-async function rewriteText(text, profile = null) {
-    try {
-        // Obter API config
-        const apiConfig = await getAPIConfig();
-        
-        // Obter o perfil selecionado, com fallback para perfil padrão
-        const currentProfile = profile || await getSelectedProfile();
-        
-        // Construir o prompt baseado no perfil
-        const prompt = buildPrompt(text, currentProfile);
-        
-        // Fazer requisição para a API
-        const response = await makeAPIRequest(prompt, apiConfig);
-        
-        return response;
-    } catch (error) {
-        console.error("Erro ao reescrever texto:", error);
-        
-        // Mensagens de erro mais detalhadas
-        if (error.message.includes('fetch')) {
-            return "Erro de conexão. Verifique sua internet.";
-        }
-        if (error.message.includes('API')) {
-            return "Problema com o serviço de IA. Tente novamente mais tarde.";
-        }
-        
-        return "Ocorreu um erro ao reescrever o texto. Por favor, tente novamente.";
-    }
-}
+import { initializeStorage } from '../modules/storage.js';
+import { rewriteText } from '../modules/ai.js';
 
-// Função para obter configurações da API
-async function getAPIConfig() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['apiKey', 'apiUrl', 'model'], (result) => {
-            const config = {
-                apiKey: result.apiKey || "22c921ec30c04a28aa32c86edd034156",
-                url: result.apiUrl || "https://dev-openai-take.openai.azure.com/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                model: result.model || "gpt-4-0613"
-            };
-            resolve(config);
-        });
-    });
-}
+// Map to keep track of which tabs have content scripts
+const activeTabs = new Map();
 
-// Função para obter perfil salvo
-async function getSelectedProfile() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['selectedProfile'], (result) => {
-            const profile = result.selectedProfile || {
-                style: 'Professional',
-                uxWriting: false,
-                cognitiveBias: false,
-                addEmojis: false
-            };
-            resolve(profile);
-        });
-    });
-}
-
-// Construir prompt com melhor estrutura para diferentes perfis
-function buildPrompt(text, profile) {
-    const styleMappings = {
-        'Professional': 'Use a formal, objective tone with precise language. Focus on clarity and professionalism.',
-        'Casual': 'Write in a friendly, conversational style. Use relaxed language while maintaining coherence.',
-        'Creative': 'Use imaginative and engaging language. Feel free to use metaphors and vivid descriptions.',
-        'Technical': 'Employ clear, precise technical language. Focus on accuracy and specificity.',
-        'Persuasive': 'Craft a compelling, motivational text that influences the reader positively.'
-    };
-
-    // Construa um sistema de prompt melhorado
-    let systemPrompt = `You are an expert writer that helps people improve their writing.`;
-    
-    // Adiciona instruções específicas para UX writing se solicitado
-    if (profile.uxWriting) {
-        systemPrompt += ` You specialize in UX writing principles: clarity, conciseness, and helpfulness. You make text more scannable and user-friendly.`;
-    }
-    
-    // Adiciona técnicas persuasivas sutis
-    if (profile.cognitiveBias) {
-        systemPrompt += ` You understand psychological principles and cognitive biases, and can subtly incorporate them to make text more persuasive and engaging.`;
-    }
-    
-    // Personaliza para uso de emojis
-    if (profile.addEmojis) {
-        systemPrompt += ` You tastefully incorporate relevant emojis to enhance emotional connection, but never overuse them.`;
-    }
-
-    // Construção do prompt do usuário
-    let userPrompt = `Rewrite the following text while maintaining the original meaning and intent, but improving its quality:
-
-Original Text:
-"${text}"
-
-Style Guidelines:
-- Writing Style: ${styleMappings[profile.style] || styleMappings['Professional']}
-${profile.uxWriting ? '- Optimize for clarity and user experience: make it scannable, concise, and action-oriented' : ''}
-${profile.cognitiveBias ? '- Apply subtle persuasive techniques to make it more engaging and convincing' : ''}
-${profile.addEmojis ? '- Add relevant emojis where appropriate to enhance the message' : ''}
-
-Please preserve any key information, technical terms, or specific examples from the original. Your rewrite should be roughly the same length as the original unless brevity would improve clarity.`;
-
-    return {
-        systemPrompt,
-        userPrompt
-    };
-}
-
-// Função para fazer requisição à API com melhor tratamento de erro
-async function makeAPIRequest(prompt, apiConfig) {
-    try {
-        const response = await fetch(apiConfig.url, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiConfig.apiKey}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: apiConfig.model,
-                messages: [
-                    { role: "system", content: prompt.systemPrompt },
-                    { role: "user", content: prompt.userPrompt }
-                ],
-                max_tokens: 800,
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`Erro na API: ${response.status} - ${errorBody}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content.trim();
-    } catch (error) {
-        console.error("Erro na chamada da API:", error);
-        throw error;  // Repassa o erro para tratamento superior
-    }
-}
-
-// Inicialização da extensão
-chrome.runtime.onInstalled.addListener(async () => {
-    console.log("📌 Blip SmartText instalado!");
-
-    // Criação de menus de contexto
-    createContextMenus();
-    
-    // Inicializar configurações padrão
-    await initializeDefaultSettings();
-    
-    // Mostrar página de boas-vindas na primeira instalação
-    const details = await chrome.management.getSelf();
-    if (details.installType === "normal") {
-        chrome.tabs.create({ url: "welcome.html" });
-    }
+// Extension initialization
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log("📌 SmartText installed!");
+  
+  // Initialize storage
+  await initializeStorage();
+  
+  // Create context menus
+  createContextMenus();
+  
+  // Show welcome page on first install
+  if (details.reason === "install") {
+    chrome.tabs.create({ url: "welcome.html" });
+  }
 });
 
 /**
- * Cria os menus de contexto da extensão
+ * Create context menus for the extension
  */
 function createContextMenus() {
-    // Remover menus existentes para evitar duplicatas
-    chrome.contextMenus.removeAll(() => {
-        const contextMenus = [
-            { id: "aiRewrite", title: "Reescrever com IA 🤖", contexts: ["selection"] },
-            { id: "formatText", title: "Formatar Texto ✍️", contexts: ["selection"] },
-            { id: "insertEmoji", title: "Inserir Emoji 😀", contexts: ["editable"] },
-            { id: "separator1", type: "separator", contexts: ["selection", "editable"] },
-            { id: "openAIPanel", title: "Painel de IA ✨", contexts: ["all"] },
-            { id: "openOptions", title: "Configurações ⚙️", contexts: ["all"] }
-        ];
-
-        contextMenus.forEach(menu => chrome.contextMenus.create(menu));
-        console.log("✅ Menus de contexto criados!");
-    });
+  // Clear existing menus to avoid duplicates
+  chrome.contextMenus.removeAll(() => {
+    const menuItems = [
+      { id: "aiRewrite", title: "Rewrite with AI 🤖", contexts: ["selection"] },
+      { id: "formatText", title: "Format Text ✍️", contexts: ["selection"] },
+      { id: "insertEmoji", title: "Insert Emoji 😀", contexts: ["editable"] },
+      { id: "separator1", type: "separator", contexts: ["selection", "editable"] },
+      { id: "openAIPanel", title: "AI Panel ✨", contexts: ["all"] },
+      { id: "openOptions", title: "Settings ⚙️", contexts: ["all"] }
+    ];
+    
+    menuItems.forEach(menu => chrome.contextMenus.create(menu));
+    console.log("✅ Context menus created!");
+  });
 }
 
 /**
- * Inicializa configurações padrão
- */
-async function initializeDefaultSettings() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['initialized'], (result) => {
-            if (!result.initialized) {
-                // Definir perfis padrão
-                const defaultProfiles = {
-                    'Default': {
-                        name: 'Default',
-                        style: 'Professional',
-                        uxWriting: false,
-                        cognitiveBias: false,
-                        addEmojis: false
-                    },
-                    'UX Writer': {
-                        name: 'UX Writer',
-                        style: 'Professional',
-                        uxWriting: true,
-                        cognitiveBias: false,
-                        addEmojis: false
-                    },
-                    'Marketing': {
-                        name: 'Marketing',
-                        style: 'Persuasive',
-                        uxWriting: false,
-                        cognitiveBias: true,
-                        addEmojis: true
-                    },
-                    'Technical': {
-                        name: 'Technical',
-                        style: 'Technical',
-                        uxWriting: false,
-                        cognitiveBias: false,
-                        addEmojis: false
-                    },
-                    'Social Media': {
-                        name: 'Social Media',
-                        style: 'Casual',
-                        uxWriting: false,
-                        cognitiveBias: true,
-                        addEmojis: true
-                    }
-                };
-                
-                chrome.storage.local.set({
-                    initialized: true,
-                    apiKey: "22c921ec30c04a28aa32c86edd034156",
-                    apiUrl: "https://dev-openai-take.openai.azure.com/openai/deployments/gpt-4/chat/completions?api-version=2023-03-15-preview",
-                    model: "gpt-4-0613",
-                    autoRewrite: false,
-                    defaultStyle: 'Professional',
-                    selectedProfile: defaultProfiles['Default'],
-                    profiles: defaultProfiles,
-                    recentEmojis: ["👍", "❤️", "✅", "🎉", "👋", "🙏", "💯", "🔥"]
-                }, resolve);
-            } else {
-                resolve();
-            }
-        });
-    });
-}
-
-/**
- * Verifica se a URL é válida para execução do script
- * @param {string} url - URL a ser verificada
- * @returns {boolean} - Se a URL é válida
+ * Check if a URL is valid for content script injection
  */
 function isValidURL(url) {
-    return url && 
-           !url.startsWith("chrome://") && 
-           !url.startsWith("chrome-extension://") &&
-           !url.startsWith("about:") && 
-           !url.startsWith("file://") && 
-           !url.includes("chrome.google.com/webstore");
+  return url && 
+         !url.startsWith("chrome://") && 
+         !url.startsWith("chrome-extension://") &&
+         !url.startsWith("about:") && 
+         !url.startsWith("file://") && 
+         !url.includes("chrome.google.com/webstore");
 }
 
-// Injeta content script dinamicamente quando necessário
+/**
+ * Inject content scripts into a tab that doesn't have them yet
+ */
+async function injectContentScript(tabId) {
+  try {
+    // First inject CSS
+    await chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ["styles/content.css"]
+    });
+    
+    // Then inject JavaScript
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["scripts/content.js"]
+    });
+    
+    // Mark tab as injected
+    activeTabs.set(tabId, true);
+    
+    console.log("✅ Content script injected into tab", tabId);
+    return true;
+  } catch (error) {
+    console.error("🚫 Error injecting content script:", error);
+    activeTabs.set(tabId, false);
+    return false;
+  }
+}
+
+// Listen for tab updates to inject content script when needed
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === "complete" && isValidURL(tab.url)) {
-        // Verificar se o content script já foi injetado
-        chrome.tabs.sendMessage(tabId, { action: "ping" }, (response) => {
-            // Se não receber resposta, o script ainda não foi injetado
-            if (chrome.runtime.lastError) {
-                console.log("Injetando content script em", tab.url);
-                injectContentScript(tabId);
-            }
-        });
+  if (changeInfo.status === "complete" && isValidURL(tab.url)) {
+    // Check if content script is already injected
+    chrome.tabs.sendMessage(tabId, { action: "ping" }, (response) => {
+      // If no response, the script isn't injected yet
+      if (chrome.runtime.lastError || !response) {
+        injectContentScript(tabId);
+      }
+    });
+  }
+});
+
+// Handle tab removal to clean up our activeTabs map
+chrome.tabs.onRemoved.addListener((tabId) => {
+  activeTabs.delete(tabId);
+});
+
+// Create a service for AI text rewriting
+const aiService = {
+  rewriteText: async (text, profile) => {
+    try {
+      return await rewriteText(text, profile);
+    } catch (error) {
+      console.error("❌ Error in AI service:", error);
+      throw error;
     }
+  }
+};
+
+// Handle messages from content scripts and popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("📨 Message received in background:", request.action);
+  
+  // Handle different message actions
+  const actions = {
+    "ping": () => {
+      // Simple ping to check if content script is active
+      sendResponse({ status: "active" });
+    },
+    
+    "contentScriptReady": () => {
+      // Content script is now ready in this tab
+      if (sender.tab) {
+        activeTabs.set(sender.tab.id, true);
+      }
+      sendResponse({ success: true });
+    },
+    
+    "getAIModule": () => {
+      // Provide the AI module to the requester
+      sendResponse({ 
+        success: true, 
+        module: {
+          rewriteText: async (text, profile) => {
+            try {
+              return await aiService.rewriteText(text, profile);
+            } catch (error) {
+              console.error("AI module error:", error);
+              throw error;
+            }
+          }
+        }
+      });
+    },
+    
+    "openOptions": () => {
+      chrome.runtime.openOptionsPage();
+      sendResponse({ success: true });
+    }
+  };
+  
+  // Execute the appropriate action
+  if (actions[request.action]) {
+    actions[request.action]();
+    return true; // Indicate async response
+  }
+  
+  // Forward messages to content script if needed
+  if (sender.tab) {
+    // This message came from a content script or popup, might need to be handled by content script
+    forwardMessageToContentScript(request, sender, sendResponse);
+    return true;
+  }
+  
+  // Unhandled action
+  sendResponse({ success: false, error: "Unknown action" });
+  return false;
 });
 
 /**
- * Injeta os scripts e estilos necessários na página
- * @param {number} tabId - ID da aba
+ * Forward a message to a tab's content script
  */
-function injectContentScript(tabId) {
-    // Injetar CSS primeiro
-    chrome.scripting.insertCSS({
-        target: { tabId },
-        files: ["styles/content.css"]
-    }).then(() => {
-        // Depois injetar JavaScript
-        return chrome.scripting.executeScript({
-            target: { tabId },
-            files: ["scripts/content.js"]
-        });
-    }).then(() => {
-        console.log("✅ Content script injetado com sucesso.");
-    }).catch(err => {
-        console.warn("🚫 Erro ao injetar content script:", err);
+function forwardMessageToContentScript(request, sender, sendResponse) {
+  // Determine target tab
+  const targetTabId = sender.tab ? sender.tab.id : null;
+  
+  if (!targetTabId) {
+    sendResponse({ success: false, error: "No target tab" });
+    return;
+  }
+  
+  // Forward message to content script
+  chrome.tabs.sendMessage(targetTabId, request)
+    .then(response => {
+      sendResponse(response);
+    })
+    .catch(error => {
+      console.error("❌ Error forwarding message to content script:", error);
+      sendResponse({ success: false, error: error.message });
     });
 }
 
-// Tratamento de mensagens com módulo AI e outras ações
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log("Mensagem recebida no background:", request.action);
-
-    const actions = {
-        "getAIModule": async () => {
-            // Cria um módulo de AI com a função rewriteText
-            const aiModule = {
-                rewriteText: async (text, profile) => {
-                    try {
-                        const result = await rewriteText(text, profile);
-                        return result;
-                    } catch (error) {
-                        console.error("Erro no módulo AI:", error);
-                        return "Erro ao reescrever o texto.";
-                    }
-                }
-            };
-            
-            sendResponse({ module: aiModule, success: true });
-        },
-        
-        "saveSettings": async () => {
-            // Salva configurações no armazenamento local
-            await chrome.storage.local.set(request.data);
-            sendResponse({ success: true });
-        },
-        
-        "getProfiles": async () => {
-            // Busca perfis salvos
-            const result = await chrome.storage.local.get(['profiles']);
-            sendResponse({ profiles: result.profiles || {}, success: true });
-        },
-        
-        "getSelectedProfile": async () => {
-            // Busca o perfil selecionado
-            const profile = await getSelectedProfile();
-            sendResponse({ profile, success: true });
-        },
-        
-        "isContentScriptActive": () => {
-            // Verifica se o content script está ativo
-            sendResponse({ active: true });
-        }
-    };
-
-    if (actions[request.action]) {
-        actions[request.action]();
-        return true; // Permite resposta assíncrona
-    }
-    
-    sendResponse({ success: false, error: "Ação desconhecida" });
-    return false;
-});
-
-// Escuta eventos do menu de contexto
+// Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (!isValidURL(tab.url)) {
-        console.warn("🚫 Menu de contexto não pode ser executado nesta página:", tab.url);
-        return;
-    }
-
-    // Mapeia os IDs dos menus para as ações correspondentes
-    const actions = {
-        aiRewrite: { action: "aiRewrite", data: info.selectionText },
-        formatText: { action: "showFormattingMenu", data: info.selectionText },
-        insertEmoji: { action: "showEmojiMenu" },
-        openAIPanel: { action: "showAIPanel" },
-        openOptions: { action: "openOptions" }
-    };
-
-    const actionInfo = actions[info.menuItemId];
-    if (!actionInfo) return;
-
-    // Se for para abrir as opções, abrir a página de opções
-    if (actionInfo.action === "openOptions") {
-        chrome.runtime.openOptionsPage();
-        return;
-    }
-
-    // Envia a mensagem para o content script
-    chrome.tabs.sendMessage(tab.id, actionInfo)
-        .catch(err => console.error(`❌ Erro ao executar ação ${info.menuItemId}:`, err));
+  if (!isValidURL(tab.url)) {
+    console.warn("🚫 Context menu cannot execute on this page:", tab.url);
+    return;
+  }
+  
+  // Map context menu IDs to actions
+  const actionMap = {
+    aiRewrite: { action: "aiRewrite", data: info.selectionText },
+    formatText: { action: "showFormatMenu", data: info.selectionText },
+    insertEmoji: { action: "showEmojiMenu" },
+    openAIPanel: { action: "showAIPanel" },
+    openOptions: { action: "openOptions" }
+  };
+  
+  const actionInfo = actionMap[info.menuItemId];
+  if (!actionInfo) return;
+  
+  // Handle openOptions directly
+  if (actionInfo.action === "openOptions") {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+  
+  // Send message to content script
+  chrome.tabs.sendMessage(tab.id, actionInfo)
+    .catch(error => {
+      console.error(`❌ Error executing action ${info.menuItemId}:`, error);
+      
+      // If error, try injecting content script and retrying
+      injectContentScript(tab.id).then(success => {
+        if (success) {
+          // Wait a bit for the script to initialize
+          setTimeout(() => {
+            chrome.tabs.sendMessage(tab.id, actionInfo)
+              .catch(err => console.error(`❌ Retry failed for ${info.menuItemId}:`, err));
+          }, 500);
+        }
+      });
+    });
 });
 
-// Escuta os comandos de teclado
+// Handle keyboard shortcuts
 chrome.commands.onCommand.addListener((command, tab) => {
-    const commands = {
-        "open_ai_rewrite": { action: "aiRewrite" },
-        "open_ai_panel": { action: "showAIPanel" },
-        "format_text": { action: "showFormattingMenu" },
-        "insert_emoji": { action: "showEmojiMenu" }
-    };
-    
-    const commandAction = commands[command];
-    if (commandAction) {
-        chrome.tabs.sendMessage(tab.id, commandAction)
-            .catch(err => console.error(`❌ Erro ao executar comando de teclado:`, err));
-    }
+  const commandActions = {
+    "open_ai_rewrite": { action: "aiRewrite" },
+    "open_ai_panel": { action: "showAIPanel" },
+    "format_text": { action: "showFormatMenu" },
+    "insert_emoji": { action: "showEmojiMenu" }
+  };
+  
+  const actionInfo = commandActions[command];
+  if (actionInfo) {
+    chrome.tabs.sendMessage(tab.id, actionInfo)
+      .catch(error => {
+        console.error(`❌ Error executing keyboard command:`, error);
+        
+        // Try injecting content script and retrying
+        injectContentScript(tab.id).then(success => {
+          if (success) {
+            // Wait a bit for the script to initialize
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tab.id, actionInfo)
+                .catch(err => console.error(`❌ Retry failed for command ${command}:`, err));
+            }, 500);
+          }
+        });
+      });
+  }
 });
+
+// Service worker keep-alive for better reliability
+const keepAlive = () => setInterval(() => {
+  console.log("♥️ Background script heartbeat");
+}, 20000);
+
+keepAlive();
