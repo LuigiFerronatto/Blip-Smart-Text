@@ -306,7 +306,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           state.coreModule.tooltipManager.show(range);
         } else {
           // Fallback tooltip showing
-          import('./tooltip.js').then(module => {
+          const tooltipUrl = chrome.runtime.getURL('modules/tooltip.js');
+          import(tooltipUrl).then(module => {
             if (module && module.createTooltip) {
               module.createTooltip(range, { floatingMenu: true });
             }
