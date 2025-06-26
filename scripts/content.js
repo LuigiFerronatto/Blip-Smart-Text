@@ -10,6 +10,9 @@ const state = {
   coreModule: null
 };
 
+// Cache for dynamically imported modules
+let tooltipModulePromise = null;
+
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeSmartText);
@@ -305,13 +308,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (state.coreModule && state.coreModule.tooltipManager) {
           state.coreModule.tooltipManager.show(range);
         } else {
-          // Fallback tooltip showing
-          const tooltipUrl = chrome.runtime.getURL('modules/tooltip.js');
-          import(tooltipUrl).then(module => {
+          // Fallback tooltip showing using cached module
+          if (!tooltipModulePromise) {
+            const tooltipUrl = chrome.runtime.getURL('modules/tooltip.js');
+            tooltipModulePromise = import(tooltipUrl).catch(err => {
+              tooltipModulePromise = null;
+              console.error("Error loading tooltip module:", err);
+            });
+          }
+
+          tooltipModulePromise.then(module => {
             if (module && module.createTooltip) {
               module.createTooltip(range, { floatingMenu: true });
             }
-          }).catch(err => console.error("Error loading tooltip module:", err));
+          });
         }
       }
       sendResponse({ success: true });
